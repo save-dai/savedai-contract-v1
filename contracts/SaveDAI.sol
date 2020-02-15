@@ -66,27 +66,50 @@ contract UniswapExchangeInterface {
     function setup(address token_addr) external;
 }
 
+contract CDAIInterface {
+    function mint(uint mintAmount) external returns (uint); // For ERC20
+    function exchangeRateCurrent();
+}
+
+contract OCDAIInterface {
+    function exercise(uint256 oTokensToExercise,
+      address payable[] memory vaultsToExerciseFrom) returns ;
+    function getVaultOwners() returns ; //??
+    function isExerciseWindow() view returns (bool);
+    function underlyingRequiredToExercise(uint256 oTokensToExercise) view returns (uint256);
+}
+
 contract SaveDAI is ERC20, ERC20Detailed {
     UniswapFactoryInterface uniswapFactory;
+    CDAIInterface cDAI;
+    OCDAIInterface ocDAI;
 
-    constructor() ERC20Detailed("SaveDAI", "SD", 18) public {}
-
-    function setup(address _uniswapFactoryAddress) external {
-        uniswapFactory = UniswapFactoryInterface(_uniswapFactoryAddress);
-    }
-
-    function checkExchange(address _tokenAddress) external returns (address) {
-        return uniswapFactory.getExchange(address _tokenAddress)
+    constructor() ERC20Detailed("SaveDAI", "SD", 18,
+            address _uniswapFactoryAddress,
+            address _CDAIAddress,
+            address _OCDAIAddress) public {
+      uniswapFactory = UniswapFactoryInterface(_uniswapFactoryAddress);
+      cDAI = CDAIInterface(_CDAIAddress);
+      ocDAI = OCDAIInterface(_OCDAIAddress);
     }
 
     function mint(address _to, uint256 _amount) external payable returns (bool) {
         // purchase _amount of ocDAI from uniswap (call internal _buy function))
-        // exchangeRate = getExchangeRate from compound
-        // _daiAmount = _amount * exchangeRate
-        // call compound mint function
-        // assert that return value is = _amount
+        uint256 cDAIExchangeRate = cDAI.exchangeRateCurrent();
+        uint256 _daiAmount = _amount * cDAIExchangeRate;
+        uint cDAIAmount = cDAI.mint(_daiAmount);
+        require(cDAIAmount == _amount, "cDAI and ocDAI amounts must match");
         super._mint(_to, _amount);
         return true;
+
+    function exerciseOCDAI(uint256 oTokensToExercise) {
+        require(ocDAI.isExcerciseWindow(), "Must be in exercise window");
+        address payable[] memory vaultsToExerciseFrom = getVaultOwners //???
+        ocDAI.exercise(oTokensToExercise, vaultsToExerciseFrom);
+        // need underlyingRequiredToExercise()??
+        // transfer ETH to msg.sender
+      }
+
     }
 
     // function _buy(address _tokenAddress) {
@@ -96,4 +119,3 @@ contract SaveDAI is ERC20, ERC20Detailed {
     //     );
     // }
 }
-
