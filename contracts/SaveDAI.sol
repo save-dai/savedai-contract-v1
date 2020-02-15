@@ -112,10 +112,17 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
     }
 
-    // function _buy(address _tokenAddress) {
-    //     UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(_tokenAddress));
-    //     uniswapExchange.tokenToTokenTransferInput.value(msg.value)(
-
-    //     );
-    // }
+    function _buy(uint256 _amount) internal {
+        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(ocDAIaddress));
+        uint256 ethAmount = uniswapExchange.getTokenToEthInputPrice(_amount);
+        uint256 minTokenAmount = getEthToTokenInputPrice(ethAmount);
+        uniswapExchange.tokenToTokenTransferOutput.value(msg.value)(
+                _amount, // tokens sold
+                minTokenAmount, // min_tokens_bought
+                ethAmount, // min eth bought
+                now + 120, // deadline
+                address(this),
+                _tokenAddress // token address
+        );
+    }
 }
