@@ -11,8 +11,10 @@ import logo from "./logo.png";
 export default ({ accounts }) => (
   <div className="App">
     <div className="section">
-      <h2>Buy SaveDAI</h2>
-
+      <h2>Exercise SaveDAI And Get Back DAI</h2>
+      <ContractForm contract="SaveDAI" method="exerciseOCDAI" labels={["Dai Amount"]}/>
+      <h2>Get SaveDAI</h2>
+      <ContractForm contract="SaveDAI" method="mint" labels={["Recipient Address", "Dai Amount"]}/>
     </div>
     <div className="section">
       <h2>SimpleStorage</h2>
