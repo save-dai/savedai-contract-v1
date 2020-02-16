@@ -5,3 +5,18 @@
 `nvm install node` (13.8.0)
 
 npm install -g truffle
+
+upgrade drizzle and react npm package versions?
+
+Download parity:
+https://releases.parity.io/ethereum/v2.7.2/x86_64-apple-darwin/parity
+
+chmod +x parity
+./parity --warp --chain kovan
+Wait for sync
+
+In root folder:
+npm install --save truffle-hdwallet-provider
+
+
+glow despair unveil below range artwork rice coyote public coffee room scrub
