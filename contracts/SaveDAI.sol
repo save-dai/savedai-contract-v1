@@ -68,21 +68,21 @@ contract UniswapExchangeInterface {
 
 // compound interface
 contract cTokenInterface {
-    function mint(uint mintAmount) external returns (uint); // For ERC20
-    function exchangeRateCurrent();
-
+    function mint(uint mintAmount) external returns (uint256); // For ERC20
+    function exchangeRateCurrent() external returns (uint256);
 }
 
 // opyn interface
 contract oTokenInterface {
-    function exercise(uint256 oTokensToExercise, address payable[] memory vaultsToExerciseFrom);
-    function isExerciseWindow() view returns (bool);
+    function exercise(uint256 oTokensToExercise, address payable[] calldata vaultsToExerciseFrom) external payable;
+    function isExerciseWindow() external view returns (bool);
 }
 
 contract SaveDAI is ERC20, ERC20Detailed {
-    address OCDAIaddress = 0xd344828e67444f0921822e83d83d009B85B04454;
+    address OCDAIAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
     address CDAIAddress = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
     address uniswapFactoryAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
+    address daiAddress = 0xc4375b7de8af5a38a93548eb8453a498222c4ff2;
     UniswapFactoryInterface public uniswapFactory;
     cTokenInterface public cDAI;
     oTokenInterface public ocDAI;
@@ -105,7 +105,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint cDAIAmount = cDAI.mint(_daiAmount);
         require(cDAIAmount == _amount, "cDAI and ocDAI amounts must match");
 
-        super._mint(_to, _amount);
+        super._mint(msg.sender, _amount);
         return true;
     }
 
@@ -127,17 +127,16 @@ contract SaveDAI is ERC20, ERC20Detailed {
       }
 
 
-    function _buy(uint256 _amount) public {
-        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(ocDAIaddress));
+    function _buy(uint256 _amount) external returns (uint256) {
+        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
         uint256 ethAmount = uniswapExchange.getTokenToEthInputPrice(_amount);
-        uint256 minTokenAmount = getEthToTokenInputPrice(ethAmount);
-        uniswapExchange.tokenToTokenTransferOutput.value(msg.value)(
+        uint256 minTokenAmount = uniswapExchange.getEthToTokenInputPrice(ethAmount);
+        return uniswapExchange.tokenToTokenSwapOutput (
                 _amount, // tokens sold
-                minTokenAmount, // min_tokens_bought
-                ethAmount, // min eth bought
+                0, // min_tokens_bought
+                0, // min eth bought
                 now + 120, // deadline
-                address(this),
-                _tokenAddress // token address
+                daiAddress // token address
         );
     }
 }
