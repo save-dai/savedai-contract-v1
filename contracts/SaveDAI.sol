@@ -66,9 +66,13 @@ contract UniswapExchangeInterface {
     function setup(address token_addr) external;
 }
 
+contract IERC20Interface {
+    function approve(address _spender, uint256 _value) external returns (bool);
+}
+
 // compound interface
 contract cTokenInterface {
-    function mint(uint mintAmount) external returns (uint256); // For ERC20
+    function mint(uint mintAmount) external returns (uint); // For ERC20
     function exchangeRateCurrent() external returns (uint256);
 }
 
@@ -78,65 +82,76 @@ contract oTokenInterface {
     function isExerciseWindow() external view returns (bool);
 }
 
-contract SaveDAI is ERC20, ERC20Detailed {
-    address OCDAIAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
-    address CDAIAddress = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
-    address uniswapFactoryAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
-    address daiAddress = 0xc4375b7de8af5a38a93548eb8453a498222c4ff2;
+contract SaveDAI {
+    address public OCDAIAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
+    address public CDAIAddress = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
+    // address public uniswapFactoryAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
+    address public daiAddress = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
     UniswapFactoryInterface public uniswapFactory;
     cTokenInterface public cDAI;
     oTokenInterface public ocDAI;
+    IERC20Interface public IERC20;
 
-    constructor() ERC20Detailed("SaveDAI", "SD", 18)
+    constructor(address _factory)
         public {
-          uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
+        //   uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
           cDAI = cTokenInterface(CDAIAddress);
           ocDAI = oTokenInterface(OCDAIAddress);
+          IERC20 = IERC20Interface(daiAddress);
+          uniswapFactory = UniswapFactoryInterface(_factory);
         }
 
-    function mint(address _to, uint256 _amount) external payable returns (bool) {
-        // purchase _amount of ocDAI from uniswap (call internal _buy function))
-        _buy(_amount);
-
+    function testCompoundMinting(uint256 _amount) public returns (bool) {
         // getExchangeRate for cDAI from compound
         uint256 cDAIExchangeRate = cDAI.exchangeRateCurrent();
         uint256 _daiAmount = _amount * cDAIExchangeRate;
         // mint cDAI
         uint cDAIAmount = cDAI.mint(_daiAmount);
         require(cDAIAmount == _amount, "cDAI and ocDAI amounts must match");
-
-        super._mint(msg.sender, _amount);
         return true;
     }
 
-    function exerciseOCDAI(uint256 _amount) {
-        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-        require(ocDAI.isExcerciseWindow(), "Must be in exercise window");
+    // function mint(address _to, uint256 _amount) external payable returns (bool) {
+    //     // purchase _amount of ocDAI from uniswap (call internal _buy function))
+    //     _buy(_amount);
 
-        // approve ocDAI contract to spend both ocDAI and cDAI
-        ocDAI.approve(ocDAIaddress, _amount);
-        cDAI.approve(ocDAIaddress, _amount)
+    //     // getExchangeRate for cDAI from compound
+    //     uint256 cDAIExchangeRate = cDAI.exchangeRateCurrent();
+    //     uint256 _daiAmount = _amount * cDAIExchangeRate;
+    //     // mint cDAI
+    //     uint cDAIAmount = cDAI.mint(_daiAmount);
+    //     require(cDAIAmount == _amount, "cDAI and ocDAI amounts must match");
 
-        uint256 balanceBefore = address(this).balance;
-        // for hackathon just hard code the main vault owner
-        ocDAI.exercise(_amount, [0x9e68B67660c223B3E0634D851F5DF821E0E17D84]);
-        uint256 balanceAfter = address(this).balance;
-        uint256 deltaEth = balanceAfter.sub(balanceBefore);
-        address(msg.sender).transfer(deltaEth);
-        super._burn(msg.sender, _amount)
-      }
+    //     // super._mint(_to, _amount);
+    //     return true;
+    // }
+
+    
+    function getExchange(address _daiAddress) public view returns (address) {
+        return uniswapFactory.getExchange(_daiAddress);
+    }
+    
+    function testExchange() public view returns (UniswapExchangeInterface) {
+        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
+        return uniswapExchange;
+    }
+    
+    function returnTokenAddress() public view returns (address) {
+        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
+        return uniswapExchange.tokenAddress();
+    }
 
 
     function _buy(uint256 _amount) external returns (uint256) {
         UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
-        uint256 ethAmount = uniswapExchange.getTokenToEthInputPrice(_amount);
-        uint256 minTokenAmount = uniswapExchange.getEthToTokenInputPrice(ethAmount);
-        return uniswapExchange.tokenToTokenSwapOutput (
+        IERC20.approve(address(uniswapExchange), _amount * 10);
+        uint256 oTokens = uniswapExchange.tokenToTokenSwapInput (
                 _amount, // tokens sold
-                0, // min_tokens_bought
-                0, // min eth bought
-                now + 120, // deadline
-                daiAddress // token address
+                1, // min_tokens_bought
+                1, // min eth bought
+                now + 12000, // deadline
+                address(OCDAIAddress) // token address
         );
+        return oTokens;
     }
 }
