@@ -70,7 +70,7 @@ contract UniswapExchangeInterface {
 contract cTokenInterface {
     function mint(uint mintAmount) external returns (uint); // For ERC20
     function exchangeRateCurrent();
-    
+
 }
 
 // opyn interface
@@ -80,21 +80,19 @@ contract oTokenInterface {
 }
 
 contract SaveDAI is ERC20, ERC20Detailed {
-    address ocDAIaddress = 0xd344828e67444f0921822e83d83d009B85B04454;
+    address OCDAIaddress = 0xd344828e67444f0921822e83d83d009B85B04454;
+    address CDAIAddress = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
+    address uniswapFactoryAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
     UniswapFactoryInterface public uniswapFactory;
     cTokenInterface public cDAI;
     oTokenInterface public ocDAI;
-    
-    constructor(
-        address _uniswapFactoryAddress,
-        address _CDAIAddress,
-        address _OCDAIAddress
-        ) ERC20Detailed("SaveDAI", "SD", 18) 
-    public {
-      uniswapFactory = UniswapFactoryInterface(_uniswapFactoryAddress);
-      cDAI = cTokenInterface(_CDAIAddress);
-      ocDAI = oTokenInterface(_OCDAIAddress);
-    }
+
+    constructor() ERC20Detailed("SaveDAI", "SD", 18)
+        public {
+          uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
+          cDAI = cTokenInterface(CDAIAddress);
+          ocDAI = oTokenInterface(OCDAIAddress);
+        }
 
     function mint(address _to, uint256 _amount) external payable returns (bool) {
         // purchase _amount of ocDAI from uniswap (call internal _buy function))
@@ -111,17 +109,21 @@ contract SaveDAI is ERC20, ERC20Detailed {
         return true;
     }
 
-    function exerciseOCDAI(uint256 oTokensToExercise) {
-        require(balanceOf(msg.sender) >= _oTokensToExercise, "Must have sufficient balance");
+    function exerciseOCDAI(uint256 _amount) {
+        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
         require(ocDAI.isExcerciseWindow(), "Must be in exercise window");
-        
-        // for hackathon just hard code the main vault owner
+
+        // approve ocDAI contract to spend both ocDAI and cDAI
+        ocDAI.approve(ocDAIaddress, _amount);
+        cDAI.approve(ocDAIaddress, _amount)
+
         uint256 balanceBefore = address(this).balance;
-        ocDAI.exercise(_oTokensToExercise, [0x9e68B67660c223B3E0634D851F5DF821E0E17D84]);
+        // for hackathon just hard code the main vault owner
+        ocDAI.exercise(_amount, [0x9e68B67660c223B3E0634D851F5DF821E0E17D84]);
         uint256 balanceAfter = address(this).balance;
-        uint256 deltaEth = balanceAfter - balanceBefore; // TODO add safe subtract
+        uint256 deltaEth = balanceAfter.sub(balanceBefore);
         address(msg.sender).transfer(deltaEth);
-        super._burn(msg.sender, _oTokensToExercise)
+        super._burn(msg.sender, _amount)
       }
 
 
@@ -139,4 +141,3 @@ contract SaveDAI is ERC20, ERC20Detailed {
         );
     }
 }
-
