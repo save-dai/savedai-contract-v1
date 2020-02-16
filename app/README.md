@@ -66,3 +66,21 @@ This section has moved here: https://facebook.github.io/create-react-app/docs/de
 ### `yarn build` fails to minify
 
 This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+
+
+### Mehmet Notes
+Uniswap Kovan
+Kovan DAI Token
+0x4C38cDC08f1260F5c4b21685654393BB1e66a858
+
+Kovan MKR Token
+0xaC94Ea989f6955C67200DD67F0101e1865A560Ea
+
+Kovan Uniswap Factory
+0xD3E51Ef092B2845f10401a0159B2B96e8B6c3D30
+
+Kovan DAI Exchange
+0x8779C708e2C3b1067de9Cd63698E4334866c691C
+
+Kovan MKR Exchange
+0xc64F00B099649D578Bf289894d3A51ee7d0b04e5
