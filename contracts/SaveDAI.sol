@@ -1,3 +1,4 @@
+
 pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -108,15 +109,6 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
         super._mint(_to, _amount);
         return true;
-
-    function exerciseOCDAI(uint256 oTokensToExercise) {
-        require(ocDAI.isExcerciseWindow(), "Must be in exercise window");
-        address payable[] memory vaultsToExerciseFrom = getVaultOwners //???
-        ocDAI.exercise(oTokensToExercise, vaultsToExerciseFrom);
-        // need underlyingRequiredToExercise()??
-        // transfer ETH to msg.sender
-      }
-
     }
 
     function exerciseOCDAI(uint256 oTokensToExercise) {
@@ -147,3 +139,4 @@ contract SaveDAI is ERC20, ERC20Detailed {
         );
     }
 }
+
