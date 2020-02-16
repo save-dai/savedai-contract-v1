@@ -3,6 +3,7 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Solidity Interface
 contract UniswapFactoryInterface {
@@ -74,29 +75,36 @@ contract cTokenInterface {
 
 // opyn interface
 contract oTokenInterface {
-    function exercise(uint256 oTokensToExercise, address payable[] calldata vaultsToExerciseFrom) external payable;
+    function exercise(uint256 oTokensToExercise) public payable;
     function isExerciseWindow() external view returns (bool);
 }
 
 contract SaveDAI is ERC20, ERC20Detailed {
-    address OCDAIAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
-    address CDAIAddress = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
-    address uniswapFactoryAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
-    address daiAddress = 0xc4375b7de8af5a38a93548eb8453a498222c4ff2;
+    address public ocdaiAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
+    address public cdaiAddress = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
+    address public daiAddress = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
+    address public uniswapFactoryAddress = 0xD3E51Ef092B2845f10401a0159B2B96e8B6c3D30;
+
     UniswapFactoryInterface public uniswapFactory;
     cTokenInterface public cDAI;
     oTokenInterface public ocDAI;
+    IERC20 public cdaiErc20;
+    IERC20 public ocDaiErc20;
+    IERC20 public daiErc20;
 
     constructor() ERC20Detailed("SaveDAI", "SD", 18)
         public {
+          cDAI = cTokenInterface(cdaiAddress);
+          ocDAI = oTokenInterface(ocdaiAddress);
+          cdaiErc20 = IERC20(cdaiAddress);
+          ocDaiErc20 = IERC20(ocdaiAddress);
+          daiErc20 = IERC20(daiAddress);
           uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
-          cDAI = cTokenInterface(CDAIAddress);
-          ocDAI = oTokenInterface(OCDAIAddress);
         }
 
     function mint(address _to, uint256 _amount) external payable returns (bool) {
         // purchase _amount of ocDAI from uniswap (call internal _buy function))
-        _buy(_amount);
+        // _buy(_amount);
 
         // getExchangeRate for cDAI from compound
         uint256 cDAIExchangeRate = cDAI.exchangeRateCurrent();
@@ -105,38 +113,41 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint cDAIAmount = cDAI.mint(_daiAmount);
         require(cDAIAmount == _amount, "cDAI and ocDAI amounts must match");
 
-        super._mint(msg.sender, _amount);
+        super._mint(_to, _amount);
         return true;
     }
 
-    function exerciseOCDAI(uint256 _amount) {
+    function exerciseOCDAI(uint256 _amount) public {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-        require(ocDAI.isExcerciseWindow(), "Must be in exercise window");
+        require(ocDAI.isExerciseWindow(), "Must be in exercise window");
 
         // approve ocDAI contract to spend both ocDAI and cDAI
-        ocDAI.approve(ocDAIaddress, _amount);
-        cDAI.approve(ocDAIaddress, _amount)
+        ocDaiErc20.approve(address(ocdaiAddress), _amount);
+        cdaiErc20.approve(address(ocdaiAddress), _amount);
 
         uint256 balanceBefore = address(this).balance;
         // for hackathon just hard code the main vault owner
-        ocDAI.exercise(_amount, [0x9e68B67660c223B3E0634D851F5DF821E0E17D84]);
+
+        // address[] memory vaultOwners = [0x9e68B67660c223B3E0634D851F5DF821E0E17D84];
+        ocDAI.exercise(_amount);
+
         uint256 balanceAfter = address(this).balance;
         uint256 deltaEth = balanceAfter.sub(balanceBefore);
         address(msg.sender).transfer(deltaEth);
-        super._burn(msg.sender, _amount)
+        super._burn(msg.sender, _amount);
       }
 
 
     function _buy(uint256 _amount) external returns (uint256) {
         UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
-        uint256 ethAmount = uniswapExchange.getTokenToEthInputPrice(_amount);
-        uint256 minTokenAmount = uniswapExchange.getEthToTokenInputPrice(ethAmount);
-        return uniswapExchange.tokenToTokenSwapOutput (
+        daiErc20.approve(address(uniswapExchange), _amount * 10);
+        uint256 oTokens = uniswapExchange.tokenToTokenSwapInput (
                 _amount, // tokens sold
-                0, // min_tokens_bought
-                0, // min eth bought
-                now + 120, // deadline
-                daiAddress // token address
+                1, // min_tokens_bought
+                1, // min eth bought
+                now + 12000, // deadline
+                address(ocdaiAddress) // token address
         );
+        return oTokens;
     }
 }
