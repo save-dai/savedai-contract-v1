@@ -1,5 +1,5 @@
 const SaveDAI = artifacts.require("SaveDAI");
 
-module.exports = function(deployer) {
+module.exports = deployer => {
   deployer.deploy(SaveDAI);
 };
