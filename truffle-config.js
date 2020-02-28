@@ -4,8 +4,6 @@ require('dotenv').config()
 
 const path = require("path");
 
-
-console.log(process.env);
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
   // to customize your Truffle configuration!

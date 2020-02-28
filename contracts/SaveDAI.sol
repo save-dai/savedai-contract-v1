@@ -4,114 +4,41 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-// Solidity Interface
-contract UniswapFactoryInterface {
-    // Public Variables
-    address public exchangeTemplate;
-    uint256 public tokenCount;
-    // Create Exchange
-    function createExchange(address token) external returns (address exchange);
-    // Get Exchange and Token Info
-    function getExchange(address token) external view returns (address exchange);
-    function getToken(address exchange) external view returns (address token);
-    function getTokenWithId(uint256 tokenId) external view returns (address token);
-    // Never use
-    function initializeFactory(address template) external;
-}
-
-contract UniswapExchangeInterface {
-    // Address of ERC20 token sold on this exchange
-    function tokenAddress() external view returns (address token);
-    // Address of Uniswap Factory
-    function factoryAddress() external view returns (address factory);
-    // Provide Liquidity
-    function addLiquidity(uint256 min_liquidity, uint256 max_tokens, uint256 deadline) external payable returns (uint256);
-    function removeLiquidity(uint256 amount, uint256 min_eth, uint256 min_tokens, uint256 deadline) external returns (uint256, uint256);
-    // Get Prices
-    function getEthToTokenInputPrice(uint256 eth_sold) external view returns (uint256 tokens_bought);
-    function getEthToTokenOutputPrice(uint256 tokens_bought) external view returns (uint256 eth_sold);
-    function getTokenToEthInputPrice(uint256 tokens_sold) external view returns (uint256 eth_bought);
-    function getTokenToEthOutputPrice(uint256 eth_bought) external view returns (uint256 tokens_sold);
-    // Trade ETH to ERC20
-    function ethToTokenSwapInput(uint256 min_tokens, uint256 deadline) external payable returns (uint256  tokens_bought);
-    function ethToTokenTransferInput(uint256 min_tokens, uint256 deadline, address recipient) external payable returns (uint256  tokens_bought);
-    function ethToTokenSwapOutput(uint256 tokens_bought, uint256 deadline) external payable returns (uint256  eth_sold);
-    function ethToTokenTransferOutput(uint256 tokens_bought, uint256 deadline, address recipient) external payable returns (uint256  eth_sold);
-    // Trade ERC20 to ETH
-    function tokenToEthSwapInput(uint256 tokens_sold, uint256 min_eth, uint256 deadline) external returns (uint256  eth_bought);
-    function tokenToEthTransferInput(uint256 tokens_sold, uint256 min_eth, uint256 deadline, address recipient) external returns (uint256  eth_bought);
-    function tokenToEthSwapOutput(uint256 eth_bought, uint256 max_tokens, uint256 deadline) external returns (uint256  tokens_sold);
-    function tokenToEthTransferOutput(uint256 eth_bought, uint256 max_tokens, uint256 deadline, address recipient) external returns (uint256  tokens_sold);
-    // Trade ERC20 to ERC20
-    function tokenToTokenSwapInput(uint256 tokens_sold, uint256 min_tokens_bought, uint256 min_eth_bought, uint256 deadline, address token_addr) external returns (uint256  tokens_bought);
-    function tokenToTokenTransferInput(uint256 tokens_sold, uint256 min_tokens_bought, uint256 min_eth_bought, uint256 deadline, address recipient, address token_addr) external returns (uint256  tokens_bought);
-    function tokenToTokenSwapOutput(uint256 tokens_bought, uint256 max_tokens_sold, uint256 max_eth_sold, uint256 deadline, address token_addr) external returns (uint256  tokens_sold);
-    function tokenToTokenTransferOutput(uint256 tokens_bought, uint256 max_tokens_sold, uint256 max_eth_sold, uint256 deadline, address recipient, address token_addr) external returns (uint256  tokens_sold);
-    // Trade ERC20 to Custom Pool
-    function tokenToExchangeSwapInput(uint256 tokens_sold, uint256 min_tokens_bought, uint256 min_eth_bought, uint256 deadline, address exchange_addr) external returns (uint256  tokens_bought);
-    function tokenToExchangeTransferInput(uint256 tokens_sold, uint256 min_tokens_bought, uint256 min_eth_bought, uint256 deadline, address recipient, address exchange_addr) external returns (uint256  tokens_bought);
-    function tokenToExchangeSwapOutput(uint256 tokens_bought, uint256 max_tokens_sold, uint256 max_eth_sold, uint256 deadline, address exchange_addr) external returns (uint256  tokens_sold);
-    function tokenToExchangeTransferOutput(uint256 tokens_bought, uint256 max_tokens_sold, uint256 max_eth_sold, uint256 deadline, address recipient, address exchange_addr) external returns (uint256  tokens_sold);
-    // ERC20 comaptibility for liquidity tokens
-    bytes32 public name;
-    bytes32 public symbol;
-    uint256 public decimals;
-    function transfer(address _to, uint256 _value) external returns (bool);
-    function transferFrom(address _from, address _to, uint256 value) external returns (bool);
-    function approve(address _spender, uint256 _value) external returns (bool);
-    function allowance(address _owner, address _spender) external view returns (uint256);
-    function balanceOf(address _owner) external view returns (uint256);
-    function totalSupply() external view returns (uint256);
-    // Never use
-    function setup(address token_addr) external;
-}
-
-// compound interface
-contract cTokenInterface {
-    function mint(uint mintAmount) external returns (uint256); // For ERC20
-    function exchangeRateCurrent() external returns (uint256);
-}
-
-// opyn interface
-contract oTokenInterface {
-    function exercise(uint256 oTokensToExercise) public payable;
-    function isExerciseWindow() external view returns (bool);
-}
+import "./lib/UniswapExchangeInterface.sol";
+import "./lib/UniswapFactoryInterface.sol";
+import "./lib/CTokenInterface.sol";
+import "./lib/OTokenInterface.sol";
 
 contract SaveDAI is ERC20, ERC20Detailed {
-    address public ocdaiAddress = 0xd344828e67444f0921822e83d83d009B85B04454;
-    address public cdaiAddress = 0xe7bc397DBd069fC7d0109C0636d06888bb50668c;
-    address public daiAddress = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
-    address public uniswapFactoryAddress = 0xD3E51Ef092B2845f10401a0159B2B96e8B6c3D30;
+    // mainnet addresses
+    address public daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address public ocDaiAddress = 0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33;
+    address public cDaiAddress = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643;
+    address public uniswapFactoryAddress = 0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95;
 
     UniswapFactoryInterface public uniswapFactory;
-    cTokenInterface public cDAI;
-    oTokenInterface public ocDAI;
-    IERC20 public cdaiErc20;
-    IERC20 public ocDaiErc20;
-    IERC20 public daiErc20;
+    CTokenInterface public cDai;
+    OTokenInterface public ocDai;
+    IERC20 public dai;
 
     constructor() ERC20Detailed("SaveDAI", "SD", 18)
         public {
-          cDAI = cTokenInterface(cdaiAddress);
-          ocDAI = oTokenInterface(ocdaiAddress);
-          cdaiErc20 = IERC20(cdaiAddress);
-          ocDaiErc20 = IERC20(ocdaiAddress);
-          daiErc20 = IERC20(daiAddress);
+          cDai = CTokenInterface(cDaiAddress);
+          ocDai = OTokenInterface(ocDaiAddress);
+          dai = IERC20(daiAddress);
           uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
         }
 
     function mint(address _to, uint256 _amount) external payable returns (bool) {
-        // purchase _amount of ocDAI from uniswap (call internal _buy function))
+        // purchase _amount of ocDai from uniswap (call internal _buy function))
         // _buy(_amount);
 
-        // getExchangeRate for cDAI from compound
-        uint256 cDAIExchangeRate = cDAI.exchangeRateCurrent();
-        uint256 _daiAmount = _amount * cDAIExchangeRate;
-        // mint cDAI
-        uint cDAIAmount = cDAI.mint(_daiAmount);
-        require(cDAIAmount == _amount, "cDAI and ocDAI amounts must match");
+        // // getExchangeRate for cDai from compound
+        // uint256 cDAIExchangeRate = cDai.exchangeRateCurrent();
+        // uint256 _daiAmount = _amount * cDAIExchangeRate;
+        // // mint cDai
+        // uint cDAIAmount = cDai.mint(_daiAmount);
+        // require(cDAIAmount == _amount, "cDai and ocDai amounts must match");
 
         super._mint(_to, _amount);
         return true;
@@ -119,17 +46,17 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
     function exerciseOCDAI(uint256 _amount) public {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-        require(ocDAI.isExerciseWindow(), "Must be in exercise window");
+        require(ocDai.isExerciseWindow(), "Must be in exercise window");
 
-        // approve ocDAI contract to spend both ocDAI and cDAI
-        ocDaiErc20.approve(address(ocdaiAddress), _amount);
-        cdaiErc20.approve(address(ocdaiAddress), _amount);
+        // approve ocDai contract to spend both ocDai and cDai
+        ocDai.approve(address(ocDaiAddress), _amount);
+        cDai.approve(address(ocDaiAddress), _amount);
 
         uint256 balanceBefore = address(this).balance;
         // for hackathon just hard code the main vault owner
 
         // address[] memory vaultOwners = [0x9e68B67660c223B3E0634D851F5DF821E0E17D84];
-        ocDAI.exercise(_amount);
+        ocDai.exercise(_amount);
 
         uint256 balanceAfter = address(this).balance;
         uint256 deltaEth = balanceAfter.sub(balanceBefore);
@@ -140,14 +67,14 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
     function _buy(uint256 _amount) external returns (uint256) {
         UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
-        daiErc20.approve(address(uniswapExchange), _amount * 10);
-        uint256 oTokens = uniswapExchange.tokenToTokenSwapInput (
-                _amount, // tokens sold
-                1, // min_tokens_bought
-                1, // min eth bought
-                now + 12000, // deadline
-                address(ocdaiAddress) // token address
-        );
-        return oTokens;
+        // daiErc20.approve(address(uniswapExchange), _amount * 10);
+        // uint256 oTokens = uniswapExchange.tokenToTokenSwapInput (
+        //         _amount, // tokens sold
+        //         1, // min_tokens_bought
+        //         1, // min eth bought
+        //         now + 12000, // deadline
+        //         address(ocdaiAddress) // token address
+        // );
+        // return oTokens;
     }
 }
