@@ -29,7 +29,9 @@ const getDaiBalance = async account => {
   return daiContract.methods.balanceOf(account).call();
 };
 
+// Kseniya's wallet and balance
 const myWallet = "0xb8ff821e6a8750c97d081c695dd568681be6ec34";
+const myBalance = 49361910000000000;
 
 contract('SaveDAI', function (accounts) {
     beforeEach(async function () {
@@ -38,8 +40,7 @@ contract('SaveDAI', function (accounts) {
 
     it('should return my balance', async function () {
       const balance = await getDaiBalance(myWallet);
-      const kseniyaBalance = 49361910000000000;
-      assert.equal(balance, kseniyaBalance);
+      assert.equal(balance, myBalance);
     });
 
     it('it should mint Dai', async function () {
