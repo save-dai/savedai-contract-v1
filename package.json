@@ -26,5 +26,8 @@
     "openzeppelin-solidity": "^2.1.1",
     "truffle-flattener": "^1.4.2",
     "truffle-hdwallet-provider": "^1.0.17"
+  },
+  "devDependencies": {
+    "@openzeppelin/test-helpers": "^0.5.4"
   }
 }
