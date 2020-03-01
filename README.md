@@ -24,7 +24,7 @@ glow despair unveil below range artwork rice coyote public coffee room scrub
 # Testing
 To run a forked mainnet with ganache, open a tab in your terminal and run:
 
-`ganache-cli -f https://mainnet.infura.io/v3/<INFURA-PROJECTID> --unlock 0x6b175474e89094c44da98b954eedeac495271d0f`
+`ganache-cli -f https://mainnet.infura.io/v3/<INFURA-PROJECTID> --unlock 0xdfbaf3e4c7496dad574a1b842bc85b402bdc298d`
 
 In another tab, `cd` into the project and run:
 

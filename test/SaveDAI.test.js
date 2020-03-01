@@ -29,43 +29,19 @@ const getDaiBalance = async account => {
   return daiContract.methods.balanceOf(account).call();
 };
 
-// Kseniya's wallet and balance
-const myWallet = "0xb8ff821e6a8750c97d081c695dd568681be6ec34";
-const myBalance = 49361910000000000;
+const userWallet = "0xdfbaf3e4c7496dad574a1b842bc85b402bdc298d";
 
 contract('SaveDAI', function (accounts) {
     beforeEach(async function () {
       saveDAI = await SaveDAI.new();
     });
 
-    it('should return my balance', async function () {
-      const balance = await getDaiBalance(myWallet);
-      assert.equal(balance, myBalance);
-    });
-
-    it('it should mint Dai', async function () {
-      // Send 1 eth to daiAddress to have gas to mint.
-      // Uses ForceSend contract, otherwise just sending
-      // a normal tx will revert.
-      const forceSend = await ForceSend.new();
-      await forceSend.go(daiAddress, { value: ether("1") });
-
-      const ethBalance = await balance.current(daiAddress);
-      console.log(ethBalance.toString())
-
-      const ethBalance2 = await web3.eth.getBalance(daiAddress)
-      console.log(ethBalance2.toString())
-
-      await daiContract.methods
-      .mint(myWallet, ether("100").toString())
-      .send({ from: daiAddress });
-
-      const daiBalance = await getDaiBalance(myWallet);
-      console.log(daiBalance);
-
+    it('should have a balance of DAI', async function () {
+      const balance = await getDaiBalance(userWallet);
+      assert.isAbove(Number(balance), 0);
     });
     
     // // TO DO TESTS
-    // describe('_buy', function () {
+    // describe('mint', function () {
     // });
 });
