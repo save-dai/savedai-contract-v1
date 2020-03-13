@@ -10,6 +10,9 @@ import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 
 contract SaveDAI is ERC20, ERC20Detailed {
+    uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
+    uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
+
     // mainnet addresses
     address public daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public ocDaiAddress = 0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33;
@@ -29,19 +32,48 @@ contract SaveDAI is ERC20, ERC20Detailed {
           uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
         }
 
-    function mint(address _to, uint256 _amount) external payable returns (bool) {
-        // purchase _amount of ocDai from uniswap (call internal _buy function))
-        // _buy(_amount);
-
-        // // getExchangeRate for cDai from compound
-        // uint256 cDAIExchangeRate = cDai.exchangeRateCurrent();
-        // uint256 _daiAmount = _amount * cDAIExchangeRate;
-        // // mint cDai
-        // uint cDAIAmount = cDai.mint(_daiAmount);
+    /**
+    * @notice This function mints saveDAI tokens
+    * @param _to The address to send the saveDAI back to
+    * @param _amount The number of saveDAI tokens to mint
+    */
+    function mint(address _to, uint256 _amount) external returns (bool) {
+        _uniswapBuyOCDAI(_amount);
+        _mintcDAI(_amount);
         // require(cDAIAmount == _amount, "cDai and ocDai amounts must match");
 
-        super._mint(_to, _amount);
+        super._mint(msg.sender, _amount);
         return true;
+    }
+
+    function _uniswapBuyOCDAI(uint256 _amount) public returns (uint256) {
+        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(address(daiAddress)));
+
+        // transfer DAI tokens from user to saveDAI contract
+        dai.transferFrom(
+            msg.sender,
+            address(this),
+            _amount
+        );
+
+        dai.approve(address(uniswapExchange), LARGE_APPROVAL_NUMBER);
+
+        return uniswapExchange.tokenToTokenSwapInput (
+                _amount, // tokens sold
+                1, // min_tokens_bought
+                1, // min eth bought
+                LARGE_BLOCK_SIZE, // deadline
+                address(ocDai) // token address
+        );
+    }
+
+    function _mintcDAI(uint256 _amount) public returns (uint256) {
+        // getExchangeRate for cDai from compound
+        uint256 cDAIExchangeRate = cDai.exchangeRateCurrent();
+        uint256 _daiAmount = _amount * cDAIExchangeRate;
+        // mint cDai
+        uint cDAIAmount = cDai.mint(_daiAmount);
+        return cDAIAmount;
     }
 
     function exerciseOCDAI(uint256 _amount) public {
@@ -62,19 +94,6 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint256 deltaEth = balanceAfter.sub(balanceBefore);
         address(msg.sender).transfer(deltaEth);
         super._burn(msg.sender, _amount);
-      }
-
-
-    function _buy(uint256 _amount) external returns (uint256) {
-        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
-        // daiErc20.approve(address(uniswapExchange), _amount * 10);
-        // uint256 oTokens = uniswapExchange.tokenToTokenSwapInput (
-        //         _amount, // tokens sold
-        //         1, // min_tokens_bought
-        //         1, // min eth bought
-        //         now + 12000, // deadline
-        //         address(ocdaiAddress) // token address
-        // );
-        // return oTokens;
     }
+
 }

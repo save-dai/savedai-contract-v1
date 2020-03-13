@@ -15,10 +15,13 @@ const {
 const SaveDAI = artifacts.require('SaveDAI');
 const UniswapFactory = artifacts.require('UniswapFactoryInterface');
 const UniswapExchange = artifacts.require('UniswapExchangeInterface');
-const ForceSend = artifacts.require("ForceSend");
 
 // ABI
 const erc20ABI = require("./abi/erc20");
+const uniswapFactoryABI = require("./abi/uniswapFactory.js");
+
+const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
+const uniswapFactoryContract = new web3.eth.Contract(uniswapFactoryABI, uniswapFactoryAddress);
 
 // Dai
 const daiAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
@@ -33,7 +36,8 @@ const userWallet = "0xdfbaf3e4c7496dad574a1b842bc85b402bdc298d";
 
 contract('SaveDAI', function (accounts) {
     beforeEach(async function () {
-      saveDAI = await SaveDAI.new();
+      savedai = await SaveDAI.new();
+      savedaiInstance = await SaveDAI.at(savedai.address);
     });
 
     it('should have a balance of DAI', async function () {
@@ -42,6 +46,11 @@ contract('SaveDAI', function (accounts) {
     });
     
     // // TO DO TESTS
-    // describe('mint', function () {
-    // });
+    describe('mint', function () {
+      it('should return exchange', async function () {
+        const address = await savedaiInstance.getExchange(daiAddress);
+        // const address = await uniswapFactoryContract.methods.getExchange(daiAddress).call();
+        console.log(address);
+      });
+    });
 });
