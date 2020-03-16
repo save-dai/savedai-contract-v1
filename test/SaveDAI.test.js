@@ -52,18 +52,19 @@ contract('SaveDAI', function (accounts) {
     });
       
     // // TO DO TESTS
-    describe('_uniswapBuyOCDAI', function () {
+    describe('mint', function () {
       it('should increase saveDAI balance by amount of ocDAI tokens bought', async function () {
-        const amount = web3.utils.toWei('100', 'ether');
+        // amount of ocDAI tokens to buy
+        const amount = '100';
 
-        await daiInstance.approve(savedaiAddress, amount, {from: userWallet});
+        await daiInstance.approve(savedaiAddress, '10000000000000000000000000', {from: userWallet});
 
         await savedaiInstance._uniswapBuyOCDAI(amount, {from: userWallet});
         const saveDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-        console.log(saveDAIbalance.toString());
+        assert.equal(amount, saveDAIbalance);
       });
       it('should mintcDAI', async function () {
-        const amount = web3.utils.toWei('100', 'ether');
+        const amount = '100';
 
         await daiInstance.approve(savedaiAddress, amount, {from: userWallet});
 

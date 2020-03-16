@@ -20,6 +20,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
     address public uniswapFactoryAddress = 0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95;
 
     UniswapFactoryInterface public uniswapFactory;
+    UniswapExchangeInterface public daiUniswapExchange;
     CTokenInterface public cDai;
     OTokenInterface public ocDai;
     IERC20 public dai;
@@ -30,6 +31,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
           ocDai = OTokenInterface(ocDaiAddress);
           dai = IERC20(daiAddress);
           uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
+          daiUniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(address(daiAddress)));
         }
 
     /**
@@ -50,20 +52,21 @@ contract SaveDAI is ERC20, ERC20Detailed {
     * @param _amount The number of DAI tokens to swap
     */
     function _uniswapBuyOCDAI(uint256 _amount) public returns (uint256) {
-        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(address(daiAddress)));
+
+        uint256 paymentTokensToTransfer = premiumToPay(_amount);
 
         // transfer DAI tokens from user to saveDAI contract
         dai.transferFrom(
             msg.sender,
             address(this),
-            _amount
+            paymentTokensToTransfer
         );
 
         // saveDAI gives uniswap exchange allowance to transfer DAI tokens
-        dai.approve(address(uniswapExchange), LARGE_APPROVAL_NUMBER);
+        dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER);
 
-        return uniswapExchange.tokenToTokenSwapInput (
-                _amount, // tokens sold
+        return daiUniswapExchange.tokenToTokenSwapInput (
+                paymentTokensToTransfer, // tokens sold
                 1, // min_tokens_bought
                 1, // min eth bought
                 LARGE_BLOCK_SIZE, // deadline
@@ -98,6 +101,29 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint256 deltaEth = balanceAfter.sub(balanceBefore);
         address(msg.sender).transfer(deltaEth);
         super._burn(msg.sender, _amount);
+    }
+
+
+    /**
+    * @notice This function calculates the premiums to be paid if a buyer wants to
+    * buy oTokens on Uniswap
+    * @param ocDaiTokensToBuy The number of oTokens to buy
+    */
+    function premiumToPay(
+        uint256 ocDaiTokensToBuy
+    ) public view returns (uint256) {
+
+        // get the amount of ETH that needs to be paid for ocDaiTokensToBuy.
+        UniswapExchangeInterface ocDaiExchange = UniswapExchangeInterface(
+            uniswapFactory.getExchange(address(ocDaiAddress))
+        );
+
+        uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
+            ocDaiTokensToBuy
+        );
+
+        // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
+        return daiUniswapExchange.getTokenToEthOutputPrice(ethToPay);
     }
 
 }
