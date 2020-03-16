@@ -34,10 +34,9 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
     /**
     * @notice This function mints saveDAI tokens
-    * @param _to The address to send the saveDAI back to
     * @param _amount The number of saveDAI tokens to mint
     */
-    function mint(address _to, uint256 _amount) external returns (bool) {
+    function mint(uint256 _amount) external returns (bool) {
         _uniswapBuyOCDAI(_amount);
         _mintcDAI(_amount);
         // require(cDAIAmount == _amount, "cDai and ocDai amounts must match");
@@ -48,7 +47,6 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
     /**
     * @notice This function buys ocDAI tokens on uniswap using DAI tokens from the user
-    * @param _to The address to send the saveDAI back to
     * @param _amount The number of DAI tokens to swap
     */
     function _uniswapBuyOCDAI(uint256 _amount) public returns (uint256) {
@@ -78,7 +76,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint256 cDAIExchangeRate = cDai.exchangeRateCurrent();
         uint256 _daiAmount = _amount * cDAIExchangeRate;
         // mint cDai
-        uint cDAIAmount = cDai.mint(_daiAmount);
+        uint256 cDAIAmount = cDai.mint(_daiAmount);
         return cDAIAmount;
     }
 
