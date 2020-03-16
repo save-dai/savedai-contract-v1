@@ -46,6 +46,11 @@ contract SaveDAI is ERC20, ERC20Detailed {
         return true;
     }
 
+    /**
+    * @notice This function buys ocDAI tokens on uniswap using DAI tokens from the user
+    * @param _to The address to send the saveDAI back to
+    * @param _amount The number of DAI tokens to swap
+    */
     function _uniswapBuyOCDAI(uint256 _amount) public returns (uint256) {
         UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(address(daiAddress)));
 
@@ -56,6 +61,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
             _amount
         );
 
+        // saveDAI gives uniswap exchange allowance to transfer DAI tokens
         dai.approve(address(uniswapExchange), LARGE_APPROVAL_NUMBER);
 
         return uniswapExchange.tokenToTokenSwapInput (
