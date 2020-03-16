@@ -12,6 +12,13 @@ module.exports = {
     develop: {
       port: 8545
     },
+    mainlocal: {
+      host: '127.0.0.1',
+      port: 8545,
+      network_id: '1',
+      skipDryRun: true,
+      gas: 6000000
+    },
     kovan: {
       provider: () => new HDWalletProvider(process.env.MNEMONIC, "https://kovan.infura.io/v3/" + process.env.INFURA_API_KEY),
       network_id: 42,
@@ -20,3 +27,4 @@ module.exports = {
     },
   }
 };
+
