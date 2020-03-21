@@ -1,0 +1,32 @@
+name: Lint and test
+
+on: [push]
+
+jobs:
+  LintAndTest:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [10.x]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup Node Environment
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Install
+      run: |
+        npm i
+        npm i -g truffle
+        npm i chainlink
+    - name: Run Ganache on Docker image
+      run: docker run -d -p 8545:8545 trufflesuite/ganache-cli -h 0.0.0.0 --gasLimit=8000029 --gasPrice=30000000000 --defaultBalanceEther=100000000 -a 40
+    - name: Lint
+      run: npm run lint:nofix
+    - name: Test
+      run: npm run test
+      env:
+        CI: true
