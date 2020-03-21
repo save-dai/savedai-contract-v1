@@ -6,9 +6,6 @@ const web3 = new Web3(web3Provider);
 const { expect } = require('chai');
 const {
   BN,           // Big Number support
-  constants,    // Common constants, like the zero address and largest integers
-  expectEvent,  // Assertions for emitted events
-  expectRevert, // Assertions for transactions that should fail
   ether,
   balance,
 } = require('@openzeppelin/test-helpers');
@@ -49,7 +46,7 @@ contract('SaveDAI', function (accounts) {
     await web3.eth.sendTransaction({
       from: accounts[0],
       to: userWallet,
-      value: ether('1')
+      value: ether('1'),
     });
   });
 
@@ -73,10 +70,10 @@ contract('SaveDAI', function (accounts) {
       const totalTransfer = daiNeededForPremium.add(dai);
 
       // approve saveDAI contract
-      await daiInstance.approve(savedaiAddress, totalTransfer, {from: userWallet});
+      await daiInstance.approve(savedaiAddress, totalTransfer, { from: userWallet });
 
       // mint tokens
-      await savedaiInstance.mint(amount, {from: userWallet});
+      await savedaiInstance.mint(amount, { from: userWallet });
 
       const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
       assert.equal(amount, ocDAIbalance);
@@ -103,10 +100,10 @@ contract('SaveDAI', function (accounts) {
       const totalTransfer = daiNeededForPremium.add(dai);
 
       // approve saveDAI contract
-      await daiInstance.approve(savedaiAddress, totalTransfer, {from: userWallet});
+      await daiInstance.approve(savedaiAddress, totalTransfer, { from: userWallet });
 
       // mint tokens
-      await savedaiInstance.mint(amount, {from: userWallet});
+      await savedaiInstance.mint(amount, { from: userWallet });
 
       const endingBalance = await daiInstance.balanceOf(userWallet);
 
@@ -203,23 +200,23 @@ contract('SaveDAI', function (accounts) {
     });
     it('should first identify the cost of cDai and store it in the cDaiCost variable', async function () {
       await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      cDaiCost = await savedaiInstance.cDaiCost.call()
+      cDaiCost = await savedaiInstance.cDaiCost.call();
       cDaiCost = new BN(cDaiCost).toString();
       // TODO: Implement assertion to best ensure correct value is being returned
     });
     it('should then identify the cost of ocDai and store it in the ocDaiCost variable', async function () {
       await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      ocDaiCost = await savedaiInstance.ocDaiCost.call()
+      ocDaiCost = await savedaiInstance.ocDaiCost.call();
       ocDaiCost = new BN(ocDaiCost).toString();
       // TODO: Implement assertion to best ensure correct value is being returned
     });
     it('should return the value in DAI for a given amount of saveDAI', async function () {
       await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      cDaiCost = await savedaiInstance.cDaiCost.call()
+      cDaiCost = await savedaiInstance.cDaiCost.call();
       cDaiCost = new BN(cDaiCost).toString();
 
       await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      ocDaiCost = await savedaiInstance.ocDaiCost.call()
+      ocDaiCost = await savedaiInstance.ocDaiCost.call();
       ocDaiCost = new BN(ocDaiCost).toString();
 
       amountOfDAI = cDaiCost + ocDaiCost;

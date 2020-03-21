@@ -21,9 +21,9 @@ jobs:
       run: |
         npm i
         npm i -g truffle
-        npm i chainlink
+        npm i eslint
     - name: Run Ganache on Docker image
-      run: docker run -d -p 8545:8545 trufflesuite/ganache-cli -h 0.0.0.0 --gasLimit=8000029 --gasPrice=30000000000 --defaultBalanceEther=100000000 -a 40
+      run: docker run -d -p 8545:8545 trufflesuite/ganache-cli -f https://mainnet.infura.io/v3/2c9885dfbf00441393ec7afae72363d5 --unlock "0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95" --unlock "0x6B175474E89094C44Da98b954EedeAC495271d0F" --unlock "0x2a1530C4C41db0B0b2bB646CB5Eb1A67b7158667" --unlock "0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33" --unlock "0xdfbaf3e4c7496dad574a1b842bc85b402bdc298d" --unlock "0xA6923533A6362008e9b536271C2Bdc0FF1467D3c"
     - name: Lint
       run: npm run lint:nofix
     - name: Test

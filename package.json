@@ -7,6 +7,12 @@
     "test": "test"
   },
   "scripts": {
+    "test": "truffle test",
+    "lint": "npm run lint:js:fix && npm run lint:sol",
+    "lint:nofix": "npm run lint:js && npm run lint:sol",
+    "lint:js": "./node_modules/.bin/eslint .",
+    "lint:js:fix": "./node_modules/.bin/eslint . --fix",
+    "lint:sol": "./node_modules/.bin/solhint  \"contracts/**/*.sol\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,13 +27,15 @@
   },
   "homepage": "https://github.com/truffle-box/drizzle-box#readme",
   "dependencies": {
-    "dotenv": "^8.2.0",
     "@openzeppelin/contracts": "^2.5.0",
+    "dotenv": "^8.2.0",
+    "eslint-plugin-mocha": "^6.3.0",
     "openzeppelin-solidity": "^2.1.1",
     "truffle-flattener": "^1.4.2",
     "truffle-hdwallet-provider": "^1.0.17"
   },
   "devDependencies": {
-    "@openzeppelin/test-helpers": "^0.5.5"
+    "@openzeppelin/test-helpers": "^0.5.5",
+    "eslint": "^6.8.0"
   }
 }
