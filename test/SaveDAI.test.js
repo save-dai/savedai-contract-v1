@@ -28,39 +28,90 @@ const userWallet = "0xfc9362c9aa1e4c7460f1cf49466e385a507dfb2b";
 const uniswapFactoryAddress = "0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95";
 
 contract('SaveDAI', function (accounts) {
-    beforeEach(async function () {
-      savedai = await SaveDAI.new();
-      savedaiAddress = savedai.address;
-      savedaiInstance = await SaveDAI.at(savedaiAddress);
+  beforeEach(async function () {
+    savedai = await SaveDAI.new();
+    savedaiAddress = savedai.address;
+    savedaiInstance = await SaveDAI.at(savedaiAddress);
 
-      // instantiate mock tokens
-      daiInstance = await ERC20.at(daiAddress);
-      ocDaiInstance = await OTokenInterface.at(ocDaiAddress);
-      cDaiInstance = await CTokenInterface.at(cDaiAddress);
+    // instantiate mock tokens
+    daiInstance = await ERC20.at(daiAddress);
+    ocDaiInstance = await OTokenInterface.at(ocDaiAddress);
+    cDaiInstance = await CTokenInterface.at(cDaiAddress);
 
-      uniswapFactory = await UniswapFactoryInterface.at(uniswapFactoryAddress);
+    uniswapFactory = await UniswapFactoryInterface.at(uniswapFactoryAddress);
 
-      const ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
-      ocDaiExchange = await UniswapExchangeInterface.at(ocDaiExchangeAddress);
-      const daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
-      daiExchange = await UniswapExchangeInterface.at(daiExchangeAddress);
+    const ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
+    ocDaiExchange = await UniswapExchangeInterface.at(ocDaiExchangeAddress);
+    const daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
+    daiExchange = await UniswapExchangeInterface.at(daiExchangeAddress);
 
-      // Send 0.1 eth to userAddress to have gas to send an ERC20 tx.
-      await web3.eth.sendTransaction({
-        from: accounts[0],
-        to: userWallet,
-        value: ether('1')
-      });
+    // Send 0.1 eth to userAddress to have gas to send an ERC20 tx.
+    await web3.eth.sendTransaction({
+      from: accounts[0],
+      to: userWallet,
+      value: ether('1')
     });
+  });
 
-    it('user wallet should have DAI balance', async () => {
-      const userWalletBalance = await daiInstance.balanceOf(userWallet);
-      expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(ether('0.1')));
+  it('user wallet should have DAI balance', async () => {
+    const userWalletBalance = await daiInstance.balanceOf(userWallet);
+    expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(ether('0.1')));
+  });
+
+  it('should send ether to the DAI address', async () => {
+    const ethBalance = await balance.current(userWallet);
+    expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
+  });
+      
+  describe('mint', async function () {
+    // amount of tokens to mint
+    const amount = '100';
+    it('should mint saveDAI tokens', async function () {
+      // calculate amount needed for approval
+      const daiNeededForPremium = await savedaiInstance.premiumToPay(amount);
+      const dai = ether(amount);
+      const totalTransfer = daiNeededForPremium.add(dai);
+
+      // approve saveDAI contract
+      await daiInstance.approve(savedaiAddress, totalTransfer, {from: userWallet});
+
+      // mint tokens
+      await savedaiInstance.mint(amount, {from: userWallet});
+
+      const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
+      assert.equal(amount, ocDAIbalance);
+      console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString())
+
+      let saveDAIbalance2 = await cDaiInstance.balanceOf(savedaiAddress);
+      saveDAIbalance2 = saveDAIbalance2 / 1e8;
+      console.log('cDAI tokens minted, in saveDAI contract', saveDAIbalance2.toString())
+
+      let underlying = await cDaiInstance.balanceOfUnderlying.call(savedaiAddress);
+      underlying = underlying / 1e18;
+      console.log('underlying balance of cDAI tokens', underlying.toString())
+
+      const saveDaiMinted = await savedaiInstance.balanceOf(userWallet);
+      console.log('saveDAI tokens minted, in userWallet', saveDaiMinted.toString())
+      assert.equal(amount, saveDaiMinted);
     });
+    it('should decrease userWallet DAI balance', async function () {
+      let initialBalance = await daiInstance.balanceOf(userWallet);
 
-    it('should send ether to the DAI address', async () => {
-      const ethBalance = await balance.current(userWallet);
-      expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
+      // calculate amount needed for approval
+      const daiNeededForPremium = await savedaiInstance.premiumToPay(amount);
+      const dai = ether(amount);
+      const totalTransfer = daiNeededForPremium.add(dai);
+
+      // approve saveDAI contract
+      await daiInstance.approve(savedaiAddress, totalTransfer, {from: userWallet});
+
+      // mint tokens
+      await savedaiInstance.mint(amount, {from: userWallet});
+
+      const endingBalance = await daiInstance.balanceOf(userWallet);
+
+      const diff = initialBalance.sub(endingBalance);
+      assert.equal(totalTransfer.toString(), diff.toString());
     });
 
     describe('premiumToPay', async function () {
@@ -144,5 +195,36 @@ contract('SaveDAI', function (accounts) {
         console.log('difference in userWallet DAI balance', diff.toString())
         // assert.equal(totalTransfer.toString(), diff.toString());
       });
+  });
+
+  describe.only('saveDaiPriceInDaiCurrent', function () {
+    beforeEach(async function () {
+      saveDaiAmount = 100;
     });
+    it('should first identify the cost of cDai and store it in the cDaiCost variable', async function () {
+      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      cDaiCost = await savedaiInstance.cDaiCost.call()
+      cDaiCost = new BN(cDaiCost).toString();
+      // TODO: Implement assertion to best ensure correct value is being returned
+    });
+    it('should then identify the cost of ocDai and store it in the ocDaiCost variable', async function () {
+      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      ocDaiCost = await savedaiInstance.ocDaiCost.call()
+      ocDaiCost = new BN(ocDaiCost).toString();
+      // TODO: Implement assertion to best ensure correct value is being returned
+    });
+    it('should return the value in DAI for a given amount of saveDAI', async function () {
+      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      cDaiCost = await savedaiInstance.cDaiCost.call()
+      cDaiCost = new BN(cDaiCost).toString();
+
+      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      ocDaiCost = await savedaiInstance.ocDaiCost.call()
+      ocDaiCost = new BN(ocDaiCost).toString();
+
+      amountOfDAI = cDaiCost + ocDaiCost;
+
+      assert.equal(amountOfDAI, cDaiCost + ocDaiCost);
+    });
+  });
 });

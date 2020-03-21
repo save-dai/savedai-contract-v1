@@ -16,6 +16,9 @@ contract SaveDAI is ERC20, ERC20Detailed {
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
     uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
 
+    uint256 public cDaiCost;
+    uint256 public ocDaiCost;
+
     // mainnet addresses
     address public daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public ocDaiAddress = 0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33;
@@ -29,13 +32,14 @@ contract SaveDAI is ERC20, ERC20Detailed {
     IERC20 public dai;
 
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
-        public {
-          cDai = CTokenInterface(cDaiAddress);
-          ocDai = OTokenInterface(ocDaiAddress);
-          dai = IERC20(daiAddress);
-          uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
-          daiUniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(address(daiAddress)));
-        }
+        public
+    {
+        cDai = CTokenInterface(cDaiAddress);
+        ocDai = OTokenInterface(ocDaiAddress);
+        dai = IERC20(daiAddress);
+        uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
+        daiUniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(address(daiAddress)));
+    }
 
     /**
     * @notice This function mints saveDAI tokens
@@ -91,7 +95,6 @@ contract SaveDAI is ERC20, ERC20Detailed {
         super._burn(msg.sender, _amount);
     }
 
-
     /**
     * @notice This function calculates the premiums to be paid if a buyer wants to
     * buy ocDAI on Uniswap
@@ -111,6 +114,53 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
         // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
         return daiUniswapExchange.getTokenToEthOutputPrice(ethToPay);
+    }
+
+    /**
+    * @notice Returns the value in DAI for a given amount of saveDAI provided
+    * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
+    * @return The value in DAI
+    */
+    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
+        _getCostOfcDAI(_saveDaiAmount);
+        _getCostOfOcDAI(_saveDaiAmount);
+        return cDaiCost.add(ocDaiCost);
+    }
+
+    /*
+    * Internal functions
+    */
+    function _getCostOfcDAI(uint256 _saveDaiAmount) internal returns (uint256) {
+        // Determine the cost in cDAI given the _saveDaiAmount provided
+        cDaiCost = _saveDaiAmount.mul(cDai.exchangeRateStored());
+        return cDaiCost;
+    }
+
+    function _getCostOfOcDAI(uint256 _saveDaiAmount) internal returns (uint256) {
+        UniswapExchangeInterface ocDaiExchange = UniswapExchangeInterface(
+            uniswapFactory.getExchange(address(ocDaiAddress))
+        );
+
+        // Cost to buy token B (ocDAI) with ETH
+        uint256 ocDAIoutputAmountB = _saveDaiAmount;
+        uint256 ocDAIinputReserveB = address(ocDaiExchange).balance;
+        uint256 ocDAIoutputReserveB = ocDai.balanceOf(address(ocDaiExchange));
+
+        uint256 numeratorB = ocDAIoutputAmountB.mul(ocDAIinputReserveB).mul(1000);
+        uint256 denominatorB = ocDAIoutputReserveB.sub(ocDAIoutputAmountB).mul(997);
+        uint256 inputAmountB = numeratorB.div(denominatorB).add(1);
+
+        // Cost to buy ETH with token A (DAI)
+        uint256 DAIoutputAmountA = inputAmountB;
+        uint256 DAIinputReserveA = dai.balanceOf(address(daiUniswapExchange));
+        uint256 DAIoutputReserveA = address(daiUniswapExchange).balance;
+
+        uint256 numeratorA = DAIoutputAmountA.mul(DAIinputReserveA).mul(1000);
+        uint256 denominatorA = DAIoutputReserveA.sub(DAIoutputAmountA).mul(997);
+        uint256 inputAmountA = numeratorA.div(denominatorA).add(1);
+
+        ocDaiCost = inputAmountA;
+        return ocDaiCost;
     }
 
     /**
@@ -144,5 +194,4 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint256 cDAIAmount = cDai.mint(_amount);
         return cDAIAmount;
     }
-
 }

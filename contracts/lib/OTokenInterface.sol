@@ -7,4 +7,5 @@ contract OTokenInterface {
     function approve(address spender, uint256 amount) external returns (bool);
     function oTokenExchangeRate() public returns (uint256, int32);
     function balanceOf(address account) external view returns (uint256);
+    function balanceOf(address account) public view returns (uint256);
 }
