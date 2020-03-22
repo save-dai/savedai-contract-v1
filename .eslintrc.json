@@ -9,10 +9,10 @@
         "SharedArrayBuffer": "readonly"
     },
     "parserOptions": {
+        "sourceType": "module",
         "ecmaVersion": 2018
     },
     "rules": {
-        "no-console":"error",
         "comma-dangle": ["error", "always-multiline"],
         "comma-spacing": ["error", {"before": false, "after": true}],
         "dot-notation": ["error", {"allowKeywords": true, "allowPattern": ""}],

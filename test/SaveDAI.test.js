@@ -59,7 +59,7 @@ contract('SaveDAI', function (accounts) {
     const ethBalance = await balance.current(userWallet);
     expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
-      
+
   describe('mint', async function () {
     // amount of tokens to mint
     const amount = '100';
@@ -77,22 +77,22 @@ contract('SaveDAI', function (accounts) {
 
       const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
       assert.equal(amount, ocDAIbalance);
-      console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString())
+      console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString());
 
       let saveDAIbalance2 = await cDaiInstance.balanceOf(savedaiAddress);
       saveDAIbalance2 = saveDAIbalance2 / 1e8;
-      console.log('cDAI tokens minted, in saveDAI contract', saveDAIbalance2.toString())
+      console.log('cDAI tokens minted, in saveDAI contract', saveDAIbalance2.toString());
 
       let underlying = await cDaiInstance.balanceOfUnderlying.call(savedaiAddress);
       underlying = underlying / 1e18;
-      console.log('underlying balance of cDAI tokens', underlying.toString())
+      console.log('underlying balance of cDAI tokens', underlying.toString());
 
       const saveDaiMinted = await savedaiInstance.balanceOf(userWallet);
-      console.log('saveDAI tokens minted, in userWallet', saveDaiMinted.toString())
+      console.log('saveDAI tokens minted, in userWallet', saveDaiMinted.toString());
       assert.equal(amount, saveDaiMinted);
     });
     it('should decrease userWallet DAI balance', async function () {
-      let initialBalance = await daiInstance.balanceOf(userWallet);
+      const initialBalance = await daiInstance.balanceOf(userWallet);
 
       // calculate amount needed for approval
       const daiNeededForPremium = await savedaiInstance.premiumToPay(amount);
