@@ -112,7 +112,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
     * @notice This function buys ocDAI tokens on uniswap
     * @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function
     */
-    function _uniswapBuyOCDAI(uint256 _premium) public returns (uint256) {
+    function _uniswapBuyOCDAI(uint256 _premium) internal returns (uint256) {
 
         // saveDAI gives uniswap exchange allowance to transfer DAI tokens
         dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER);
@@ -130,7 +130,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
     * @notice This function mints cDAI tokens
     * @param _amount The amount of DAI tokens transferred to Compound
     */
-    function _mintcDAI(uint256 _amount) public returns (uint256) {
+    function _mintcDAI(uint256 _amount) internal returns (uint256) {
 
         // saveDAI gives Compound allowance to transfer DAI tokens
         dai.approve(cDaiAddress, LARGE_APPROVAL_NUMBER);
