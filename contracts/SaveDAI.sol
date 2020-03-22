@@ -4,12 +4,15 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./lib/UniswapExchangeInterface.sol";
 import "./lib/UniswapFactoryInterface.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 
 contract SaveDAI is ERC20, ERC20Detailed {
+    using SafeMath for uint256;
+
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
     uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
 
@@ -39,48 +42,27 @@ contract SaveDAI is ERC20, ERC20Detailed {
     * @param _amount The number of saveDAI tokens to mint
     */
     function mint(uint256 _amount) external returns (bool) {
-        _uniswapBuyOCDAI(_amount);
-        _mintcDAI(_amount);
-        // require(cDAIAmount == _amount, "cDai and ocDai amounts must match");
+        // calculate how much DAI we need to pay for ocDAI premium
+        uint256 paymentForPremium = premiumToPay(_amount);
 
-        super._mint(msg.sender, _amount);
-        return true;
-    }
+        // precise DAI amount using decimals
+        uint256 amount = _amount.mul(10**18);
 
-    /**
-    * @notice This function buys ocDAI tokens on uniswap using DAI tokens from the user
-    * @param _amount The number of DAI tokens to swap
-    */
-    function _uniswapBuyOCDAI(uint256 _amount) public returns (uint256) {
+        // total amount of DAI we need to transfer
+        uint256 totalTransfer = paymentForPremium.add(amount);
 
-        uint256 paymentTokensToTransfer = premiumToPay(_amount);
-
-        // transfer DAI tokens from user to saveDAI contract
+        // transfer total DAI needed for ocDAI tokens and cDAI tokens
         dai.transferFrom(
             msg.sender,
             address(this),
-            paymentTokensToTransfer
+            totalTransfer
         );
 
-        // saveDAI gives uniswap exchange allowance to transfer DAI tokens
-        dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER);
+        _uniswapBuyOCDAI(paymentForPremium);
+        _mintcDAI(amount);
 
-        return daiUniswapExchange.tokenToTokenSwapInput (
-                paymentTokensToTransfer, // tokens sold
-                1, // min_tokens_bought
-                1, // min eth bought
-                LARGE_BLOCK_SIZE, // deadline
-                address(ocDai) // token address
-        );
-    }
-
-    function _mintcDAI(uint256 _amount) public returns (uint256) {
-        // getExchangeRate for cDai from compound
-        uint256 cDAIExchangeRate = cDai.exchangeRateCurrent();
-        uint256 _daiAmount = _amount * cDAIExchangeRate;
-        // mint cDai
-        uint256 cDAIAmount = cDai.mint(_daiAmount);
-        return cDAIAmount;
+        super._mint(msg.sender, _amount);
+        return true;
     }
 
     function exerciseOCDAI(uint256 _amount) public {
@@ -124,6 +106,38 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
         // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
         return daiUniswapExchange.getTokenToEthOutputPrice(ethToPay);
+    }
+
+    /**
+    * @notice This function buys ocDAI tokens on uniswap
+    * @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function
+    */
+    function _uniswapBuyOCDAI(uint256 _premium) public returns (uint256) {
+
+        // saveDAI gives uniswap exchange allowance to transfer DAI tokens
+        dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER);
+
+        return daiUniswapExchange.tokenToTokenSwapInput (
+                _premium, // tokens sold
+                1, // min_tokens_bought
+                1, // min eth bought
+                LARGE_BLOCK_SIZE, // deadline
+                address(ocDai) // token address
+        );
+    }
+
+    /**
+    * @notice This function mints cDAI tokens
+    * @param _amount The amount of DAI tokens transferred to Compound
+    */
+    function _mintcDAI(uint256 _amount) public returns (uint256) {
+
+        // saveDAI gives Compound allowance to transfer DAI tokens
+        dai.approve(cDaiAddress, LARGE_APPROVAL_NUMBER);
+
+        // mint cDai
+        uint256 cDAIAmount = cDai.mint(_amount);
+        return cDAIAmount;
     }
 
 }
