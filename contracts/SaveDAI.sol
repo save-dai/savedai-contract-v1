@@ -100,13 +100,9 @@ contract SaveDAI is ERC20, ERC20Detailed {
     * buy ocDAI on Uniswap
     * @param ocDaiTokensToBuy The number of ocDAI to buy
     */
-    function premiumToPay(
-        uint256 ocDaiTokensToBuy
-    ) public view returns (uint256) {
+    function premiumToPay(uint256 ocDaiTokensToBuy) public view returns (uint256) {
+        UniswapExchangeInterface ocDaiExchange = _instantiateOcDaiExchange();
 
-        UniswapExchangeInterface ocDaiExchange = UniswapExchangeInterface(
-            uniswapFactory.getExchange(address(ocDaiAddress))
-        );
         // get the amount of ETH that needs to be paid for ocDaiTokensToBuy.
         uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
             ocDaiTokensToBuy
@@ -137,9 +133,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
     }
 
     function _getCostOfOcDAI(uint256 _saveDaiAmount) internal returns (uint256) {
-        UniswapExchangeInterface ocDaiExchange = UniswapExchangeInterface(
-            uniswapFactory.getExchange(address(ocDaiAddress))
-        );
+        UniswapExchangeInterface ocDaiExchange = _instantiateOcDaiExchange();
 
         // Cost to buy token B (ocDAI) with ETH
         uint256 ocDAIoutputAmountB = _saveDaiAmount;
@@ -161,6 +155,17 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
         ocDaiCost = inputAmountA;
         return ocDaiCost;
+    }
+
+    /**
+    * @notice This function instantiates the interface for the ocDaiExchange 
+    * @return Returns the UniswapExchangeInterface for the ocDaiExchange
+    */
+    function _instantiateOcDaiExchange() internal view returns (UniswapExchangeInterface) {
+        UniswapExchangeInterface ocDaiExchange = UniswapExchangeInterface(
+            uniswapFactory.getExchange(address(ocDaiAddress))
+        );
+        return ocDaiExchange;
     }
 
     /**
