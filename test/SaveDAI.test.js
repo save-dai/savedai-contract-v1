@@ -194,7 +194,7 @@ contract('SaveDAI', function (accounts) {
       });
   });
 
-  describe.only('saveDaiPriceInDaiCurrent', function () {
+  describe('saveDaiPriceInDaiCurrent', function () {
     beforeEach(async function () {
       saveDaiAmount = 100;
     });
