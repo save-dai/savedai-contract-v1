@@ -16,9 +16,6 @@ contract SaveDAI is ERC20, ERC20Detailed {
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
     uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
 
-    uint256 public cDaiCost;
-    uint256 public ocDaiCost;
-
     // mainnet addresses
     address public daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public ocDaiAddress = 0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33;
@@ -117,18 +114,17 @@ contract SaveDAI is ERC20, ERC20Detailed {
     * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
     * @return The value in DAI
     */
-    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
-        premiumToPay(_saveDaiAmount).add(_saveDaiAmount);
-        _getCostOfcDAI(_saveDaiAmount);
-        return cDaiCost.add(ocDaiCost);
+    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public view returns (uint256) {
+        uint256 ocDaiCost = premiumToPay(_saveDaiAmount).add(_saveDaiAmount);
+        return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
     }
 
     /*
     * Internal functions
     */
-    function _getCostOfcDAI(uint256 _saveDaiAmount) internal returns (uint256) {
+    function _getCostOfcDAI(uint256 _saveDaiAmount) internal view returns (uint256) {
         // Determine the cost in cDAI given the _saveDaiAmount provided
-        cDaiCost = _saveDaiAmount.mul(cDai.exchangeRateStored());
+        uint256 cDaiCost = _saveDaiAmount.mul(cDai.exchangeRateStored());
         return cDaiCost;
     }
 

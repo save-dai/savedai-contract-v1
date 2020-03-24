@@ -198,30 +198,26 @@ contract('SaveDAI', function (accounts) {
     beforeEach(async function () {
       saveDaiAmount = 100;
     });
-    it('should first identify the cost of cDai and store it in the cDaiCost variable', async function () {
-      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      cDaiCost = await savedaiInstance.cDaiCost.call();
-      cDaiCost = new BN(cDaiCost).toString();
+    it('should first identify the cost of ocDai', async function () {
+      transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      ocDAICost = premium + saveDaiAmount;
       // TODO: Implement assertion to best ensure correct value is being returned
     });
-    it('should then identify the cost of ocDai and store it in the ocDaiCost variable', async function () {
-      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      ocDaiCost = await savedaiInstance.ocDaiCost.call();
-      ocDaiCost = new BN(ocDaiCost).toString();
+    it('should then identify the cost of cDai using _getCostOfcDAI', async function () {
+      transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      ocDAICost = premium + saveDaiAmount;
+      cDaiCost = transaction - ocDAICost;
       // TODO: Implement assertion to best ensure correct value is being returned
     });
     it('should return the value in DAI for a given amount of saveDAI', async function () {
-      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      cDaiCost = await savedaiInstance.cDaiCost.call();
-      cDaiCost = new BN(cDaiCost).toString();
-
-      await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      ocDaiCost = await savedaiInstance.ocDaiCost.call();
-      ocDaiCost = new BN(ocDaiCost).toString();
-
-      amountOfDAI = cDaiCost + ocDaiCost;
-
-      assert.equal(amountOfDAI, cDaiCost + ocDaiCost);
+      transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      ocDAICost = premium + saveDaiAmount;
+      cDaiCost = transaction - ocDAICost;
+      amountOfDAI = cDaiCost + ocDAICost;
+      assert.equal(amountOfDAI, cDaiCost + ocDAICost);
     });
   });
 });
