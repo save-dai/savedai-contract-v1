@@ -35,7 +35,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
         ocDai = OTokenInterface(ocDaiAddress);
         dai = IERC20(daiAddress);
         uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
-        daiUniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(address(daiAddress)));
+        daiUniswapExchange = _getExchange(daiAddress);
     }
 
     /**
@@ -97,12 +97,12 @@ contract SaveDAI is ERC20, ERC20Detailed {
     * buy ocDAI on Uniswap
     * @param ocDaiTokensToBuy The number of ocDAI to buy
     */
-    function premiumToPay(uint256 ocDaiTokensToBuy) public view returns (uint256) {
-        UniswapExchangeInterface ocDaiExchange = _instantiateOcDaiExchange();
+    function premiumToPay(uint256 _ocDaiTokensToBuy) public view returns (uint256) {
+        UniswapExchangeInterface ocDaiExchange = _getExchange(ocDaiAddress);
 
-        // get the amount of ETH that needs to be paid for ocDaiTokensToBuy.
+        // get the amount of ETH that needs to be paid for _ocDaiTokensToBuy.
         uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
-            ocDaiTokensToBuy
+            _ocDaiTokensToBuy
         );
 
         // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
@@ -129,17 +129,6 @@ contract SaveDAI is ERC20, ERC20Detailed {
     }
 
     /**
-    * @notice This function instantiates the interface for the ocDaiExchange 
-    * @return Returns the UniswapExchangeInterface for the ocDaiExchange
-    */
-    function _instantiateOcDaiExchange() internal view returns (UniswapExchangeInterface) {
-        UniswapExchangeInterface ocDaiExchange = UniswapExchangeInterface(
-            uniswapFactory.getExchange(address(ocDaiAddress))
-        );
-        return ocDaiExchange;
-    }
-
-    /**
     * @notice This function buys ocDAI tokens on uniswap
     * @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function
     */
@@ -155,6 +144,18 @@ contract SaveDAI is ERC20, ERC20Detailed {
                 LARGE_BLOCK_SIZE, // deadline
                 address(ocDai) // token address
         );
+    }
+
+    /**
+    * @notice This function instantiates an interface for a given exchange's address 
+    * @param _tokenAddress The token's address
+    * @return Returns the exchange interface nterface
+    */
+    function _getExchange(address _tokenAddress) internal view returns (UniswapExchangeInterface) {
+        UniswapExchangeInterface exchange = UniswapExchangeInterface(
+            uniswapFactory.getExchange(address(_tokenAddress))
+        );
+        return exchange;
     }
 
     /**
