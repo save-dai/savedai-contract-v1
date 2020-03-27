@@ -14,6 +14,9 @@ import "./lib/OTokenInterface.sol";
 contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     using SafeMath for uint256;
 
+    /***************
+    GLOBAL CONSTANTS
+    ***************/
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
     uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
 
@@ -32,8 +35,15 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     // Will override the private _name variable in ERC20Detailed if token _name is updated
     string private _name;
 
+    /***************
+    EVENTS
+    ***************/
+    event Mint(uint256 _amount);
+    event ExerciseInsurance(uint256 _amount);
+    event UpdateTokenName(string _oldName, string _newName);
+
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
-        public
+        public 
     {
         cDai = CTokenInterface(cDaiAddress);
         ocDai = OTokenInterface(ocDaiAddress);
@@ -72,6 +82,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         _mintcDAI(amountInDAI);
 
         super._mint(msg.sender, _amount);
+        emit Mint(_amount);
 
         return true;
     }
@@ -94,6 +105,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         uint256 deltaEth = balanceAfter.sub(balanceBefore);
         address(msg.sender).transfer(deltaEth);
         super._burn(msg.sender, _amount);
+        // TODO: emit ExerciseInsurance(_amount);
     }
 
     /**
@@ -133,6 +145,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         onlyOwner 
     {
         require(bytes(_newName).length > 0, 'The _newName argument must not be empty');
+        emit UpdateTokenName(name(), _newName);
         _name = _newName;
     }
 

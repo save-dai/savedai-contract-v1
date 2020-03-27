@@ -9,6 +9,7 @@ const {
   ether,
   balance,
   expectRevert,
+  expectEvent,
 } = require('@openzeppelin/test-helpers');
 
 const SaveDAI = artifacts.require('SaveDAI');
@@ -115,19 +116,19 @@ contract('SaveDAI', function (accounts) {
       assert.equal(totalTransfer.toString(), diff.toString());
     });
 
-    describe('premiumToPay', async function () {
-      // amount of ocDAI, cDAI, saveDAI
-      const amount = '489921671716';
-      it('should return premium to pay for ocDAI tokens', async function () {
-        const premium = await savedaiInstance.premiumToPay.call(amount);
+  describe('premiumToPay', async function () {
+    // amount of ocDAI, cDAI, saveDAI
+    const amount = '489921671716';
+    it('should return premium to pay for ocDAI tokens', async function () {
+      const premium = await savedaiInstance.premiumToPay.call(amount);
 
-        // use exchange directly
-        const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice.call(amount);
-        const premiumShouldBe = await daiExchange.getTokenToEthOutputPrice.call(ethToPay);
+      // use exchange directly
+      const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice.call(amount);
+      const premiumShouldBe = await daiExchange.getTokenToEthOutputPrice.call(ethToPay);
 
-        assert.equal(premium.toString(), premiumShouldBe.toString());
-      });
+      assert.equal(premium.toString(), premiumShouldBe.toString());
     });
+  });
       
     describe('mint', async function () {
       // amount of ocDAI, cDAI, saveDAI
@@ -236,6 +237,10 @@ contract('SaveDAI', function (accounts) {
       await savedaiInstance.updateTokenName('newTokenName');
       newTokenName = await savedaiInstance.name();
       assert.strictEqual(newTokenName, 'newTokenName');
+    });
+    it('should emit both the new and old ERC20 token name', async function () {
+      const { logs } = await savedaiInstance.updateTokenName('newTokenName');
+      expectEvent.inLogs(logs, 'UpdateTokenName');
     });
   });
 
