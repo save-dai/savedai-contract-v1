@@ -5,12 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./lib/UniswapExchangeInterface.sol";
 import "./lib/UniswapFactoryInterface.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 
-contract SaveDAI is ERC20, ERC20Detailed {
+contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     using SafeMath for uint256;
 
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
@@ -27,6 +28,9 @@ contract SaveDAI is ERC20, ERC20Detailed {
     CTokenInterface public cDai;
     OTokenInterface public ocDai;
     IERC20 public dai;
+
+    // Will override the private _name variable in ERC20Detailed if token _name is updated
+    string private _name;
 
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
         public
@@ -118,6 +122,28 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint256 ocDaiCost = premiumToPay(_saveDaiAmount).add(_saveDaiAmount);
         return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
     }
+
+    /**
+    * @notice Will update the token name
+    * @param _newName The new name for the token
+    * @return Returns the new token name
+    */
+    function updateTokenName(string memory _newName) 
+        public 
+        onlyOwner 
+    {
+        require(bytes(_newName).length > 0, 'The _newName argument must not be empty');
+        _name = _newName;
+    }
+
+    /**
+    * @notice Used to override name() in ERC20Detailed if updateTokenName has been called 
+    * @return Returns the new token name
+    */
+    function name() public view returns (string memory) {
+        if (bytes(_name).length == 0) { return super.name(); } 
+        else { return _name; }
+    } 
 
     /*
     * Internal functions

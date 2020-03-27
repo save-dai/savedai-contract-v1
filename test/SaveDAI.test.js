@@ -8,6 +8,7 @@ const {
   BN,           // Big Number support
   ether,
   balance,
+  expectRevert,
 } = require('@openzeppelin/test-helpers');
 
 const SaveDAI = artifacts.require('SaveDAI');
@@ -41,6 +42,9 @@ contract('SaveDAI', function (accounts) {
     ocDaiExchange = await UniswapExchangeInterface.at(ocDaiExchangeAddress);
     const daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
     daiExchange = await UniswapExchangeInterface.at(daiExchangeAddress);
+
+    owner = accounts[0];
+    notOwner = accounts[1];
 
     // Send 0.1 eth to userAddress to have gas to send an ERC20 tx.
     await web3.eth.sendTransaction({
@@ -218,6 +222,32 @@ contract('SaveDAI', function (accounts) {
       cDaiCost = transaction - ocDAICost;
       amountOfDAI = cDaiCost + ocDAICost;
       assert.equal(amountOfDAI, cDaiCost + ocDAICost);
+    });
+  });
+
+  describe('updateTokenName', function () {
+    it('should revert if not called by the owner', async function () {
+      await expectRevert(savedaiInstance.updateTokenName('newTokenName', { from: notOwner }), 'Ownable: caller is not the owner');
+    });
+    it('should revert if _newName is empty', async function () {
+      await expectRevert(savedaiInstance.updateTokenName('', { from: owner }), 'The _newName argument must not be empty');
+    });
+    it('should update and return the new ERC20 token name', async function () {
+      await savedaiInstance.updateTokenName('newTokenName');
+      newTokenName = await savedaiInstance.name();
+      assert.strictEqual(newTokenName, 'newTokenName');
+    });
+  });
+
+  describe('name', function () {
+    it('should return the inital token name if updateTokenName has not been called', async function () {
+      initialTokenName = await savedaiInstance.name();
+      assert.equal(initialTokenName, 'SaveDAI');
+    });
+    it('should return the new token name if updateTokenName has been called', async function () {
+      await savedaiInstance.updateTokenName('newTokenName');
+      newTokenName = await savedaiInstance.name();
+      assert.strictEqual(newTokenName, 'newTokenName');
     });
   });
 });
