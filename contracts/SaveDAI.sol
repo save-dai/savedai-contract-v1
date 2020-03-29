@@ -28,7 +28,7 @@ contract SaveDAI is ERC20, ERC20Detailed {
     OTokenInterface public ocDai;
     IERC20 public dai;
 
-    constructor() ERC20Detailed("SaveDAI", "SD", 18)
+    constructor() ERC20Detailed("SaveDAI", "SD", 8)
         public {
           cDai = CTokenInterface(cDaiAddress);
           ocDai = OTokenInterface(ocDaiAddress);
@@ -39,17 +39,20 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
     /**
     * @notice This function mints saveDAI tokens
-    * @param _amount The number of saveDAI tokens to mint
+    * @param _amount The number of saveDAI to mint
     */
     function mint(uint256 _amount) external returns (bool) {
-        // calculate how much DAI we need to pay for ocDAI premium
+        // calculate how much DAI we need to pay for _amount of ocDAI tokens
         uint256 paymentForPremium = premiumToPay(_amount);
 
-        // precise DAI amount using decimals
-        uint256 amount = _amount.mul(10**18);
+        // calculate DAI needed to mint _amount of cDAI
+        uint256 exchangeRate = cDai.exchangeRateCurrent();
+        uint256 amountInDAI = _amount.mul(exchangeRate).div(10**18);
 
         // total amount of DAI we need to transfer
-        uint256 totalTransfer = paymentForPremium.add(amount);
+        uint256 totalTransfer = paymentForPremium.add(amountInDAI);
+
+        require(dai.balanceOf(msg.sender) >= totalTransfer, "Must have sufficient balance");
 
         // transfer total DAI needed for ocDAI tokens and cDAI tokens
         dai.transferFrom(
@@ -58,10 +61,17 @@ contract SaveDAI is ERC20, ERC20Detailed {
             totalTransfer
         );
 
-        _uniswapBuyOCDAI(paymentForPremium);
-        _mintcDAI(amount);
+        uint256 ocDAItokens = _uniswapBuyOCDAI(paymentForPremium);
+        _mintcDAI(amountInDAI);
 
+        // mint saveDAI tokens
         super._mint(msg.sender, _amount);
+
+        uint256 saveDAItokens = balanceOf(msg.sender);
+
+        require(ocDAItokens == _amount, "ocDAI tokens purchased must equal _amount");
+        require(saveDAItokens == _amount, "saveDAI tokens minted must equal _amount");
+
         return true;
     }
 
@@ -88,18 +98,17 @@ contract SaveDAI is ERC20, ERC20Detailed {
 
     /**
     * @notice This function calculates the premiums to be paid if a buyer wants to
-    * buy oTokens on Uniswap
-    * @param ocDaiTokensToBuy The number of oTokens to buy
+    * buy ocDAI on Uniswap
+    * @param ocDaiTokensToBuy The number of ocDAI to buy
     */
     function premiumToPay(
         uint256 ocDaiTokensToBuy
     ) public view returns (uint256) {
 
-        // get the amount of ETH that needs to be paid for ocDaiTokensToBuy.
         UniswapExchangeInterface ocDaiExchange = UniswapExchangeInterface(
             uniswapFactory.getExchange(address(ocDaiAddress))
         );
-
+        // get the amount of ETH that needs to be paid for ocDaiTokensToBuy.
         uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
             ocDaiTokensToBuy
         );
