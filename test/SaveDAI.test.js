@@ -20,11 +20,11 @@ const UniswapFactoryInterface = artifacts.require('UniswapFactoryInterface');
 const UniswapExchangeInterface = artifacts.require('UniswapExchangeInterface');
 
 // mainnet addresses
-const daiAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
-const ocDaiAddress = "0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33";
-const cDaiAddress = "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643";
-const userWallet = "0xfc9362c9aa1e4c7460f1cf49466e385a507dfb2b";
-const uniswapFactoryAddress = "0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95";
+const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
+const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
+const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
+const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
+const userWallet = '0xfc9362c9aa1e4c7460f1cf49466e385a507dfb2b';
 
 contract('SaveDAI', function (accounts) {
   beforeEach(async function () {
@@ -36,6 +36,7 @@ contract('SaveDAI', function (accounts) {
     daiInstance = await ERC20.at(daiAddress);
     ocDaiInstance = await OTokenInterface.at(ocDaiAddress);
     cDaiInstance = await CTokenInterface.at(cDaiAddress);
+    uniswapFactoryInstance = await UniswapFactoryInterface.at(uniswapFactoryAddress);
 
     uniswapFactory = await UniswapFactoryInterface.at(uniswapFactoryAddress);
 
@@ -204,25 +205,59 @@ contract('SaveDAI', function (accounts) {
       saveDaiAmount = 100;
     });
     it('should first identify the cost of ocDai', async function () {
-      transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      premium = await savedaiInstance.premiumToPay(saveDaiAmount);
-      ocDAICost = premium + saveDaiAmount;
-      // TODO: Implement assertion to best ensure correct value is being returned
+      let premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      premium = new BN(premium);
+
+      saveDaiAmount = new BN(saveDaiAmount);
+
+      ocDAICost = premium.add(saveDaiAmount);
+
+      ocDaiExchange = await uniswapFactoryInstance.getExchange(ocDaiAddress);
+      const ocDaiUniswapExchangeInterface = await UniswapExchangeInterface.at(ocDaiExchange);
+      ethAmount = await ocDaiUniswapExchangeInterface.getEthToTokenOutputPrice(saveDaiAmount);
+
+      daiExchange = await uniswapFactoryInstance.getExchange(daiAddress);
+      const daiUniswapExchangeInterface = await UniswapExchangeInterface.at(daiExchange);
+      const daiAmount = await daiUniswapExchangeInterface.getTokenToEthOutputPrice(ethAmount);
+      assert.equal(ocDAICost.toString(), (daiAmount.add(saveDaiAmount)).toString());
     });
     it('should then identify the cost of cDai using _getCostOfcDAI', async function () {
-      transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      premium = await savedaiInstance.premiumToPay(saveDaiAmount);
-      ocDAICost = premium + saveDaiAmount;
-      cDaiCost = transaction - ocDAICost;
-      // TODO: Implement assertion to best ensure correct value is being returned
+      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      transaction = new BN(transaction);
+
+      saveDaiAmount = new BN(saveDaiAmount);
+
+      let premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      premium = new BN(premium);
+
+      let ocDAICost = premium.add(saveDaiAmount);
+      ocDAICost = new BN(ocDAICost);
+
+      let cDaiCost = transaction.sub(ocDAICost);
+      cDaiCost = new BN(cDaiCost);
+
+      let exchangeRateStored = await cDaiInstance.exchangeRateStored();
+      exchangeRateStored = new BN(exchangeRateStored);
+
+      assert.equal(cDaiCost.toString(), (exchangeRateStored.mul(saveDaiAmount)).toString());
     });
     it('should return the value in DAI for a given amount of saveDAI', async function () {
-      transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
-      premium = await savedaiInstance.premiumToPay(saveDaiAmount);
-      ocDAICost = premium + saveDaiAmount;
-      cDaiCost = transaction - ocDAICost;
-      amountOfDAI = cDaiCost + ocDAICost;
-      assert.equal(amountOfDAI, cDaiCost + ocDAICost);
+      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      transaction = new BN(transaction);
+
+      saveDaiAmount = new BN(saveDaiAmount);
+
+      let premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      premium = new BN(premium);
+
+      let ocDAICost = premium.add(saveDaiAmount);
+      ocDAICost = new BN(ocDAICost);
+
+      let  cDaiCost = transaction.sub(ocDAICost);
+      cDaiCost = new BN(cDaiCost);
+
+      amountOfDAI = cDaiCost.add(ocDAICost);
+      assert.equal(amountOfDAI.toString(), (cDaiCost.add(ocDAICost).toString()));
     });
   });
 
