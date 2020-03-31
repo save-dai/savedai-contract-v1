@@ -43,7 +43,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     event UpdateTokenName(string _oldName, string _newName);
 
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
-        public 
+        public
     {
         cDai = CTokenInterface(cDaiAddress);
         ocDai = OTokenInterface(ocDaiAddress);
@@ -78,7 +78,6 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
 
         uint256 ocDAItokens = _uniswapBuyOCDAI(paymentForPremium);
         require(ocDAItokens == _amount, "ocDAI tokens purchased must equal _amount");
-
         _mintcDAI(amountInDAI);
 
         super._mint(msg.sender, _amount);
@@ -140,9 +139,9 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _newName The new name for the token
     * @return Returns the new token name
     */
-    function updateTokenName(string memory _newName) 
-        public 
-        onlyOwner 
+    function updateTokenName(string memory _newName)
+        public
+        onlyOwner
     {
         require(bytes(_newName).length > 0, 'The _newName argument must not be empty');
         emit UpdateTokenName(name(), _newName);
@@ -150,13 +149,15 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     }
 
     /**
-    * @notice Used to override name() in ERC20Detailed if updateTokenName has been called 
+    * @notice Used to override name() in ERC20Detailed if updateTokenName has been called
     * @return Returns the new token name
     */
-    function name() public view returns (string memory) {
-        if (bytes(_name).length == 0) { return super.name(); } 
+    function name() public view returns (string memory)
+    {
+        if (bytes(_name).length == 0) { return super.name();
+    }
         else { return _name; }
-    } 
+    }
 
     /*
     * Internal functions
@@ -186,7 +187,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     }
 
     /**
-    * @notice This function instantiates an interface for a given exchange's address 
+    * @notice This function instantiates an interface for a given exchange's address
     * @param _tokenAddress The token's address
     * @return Returns the exchange interface nterface
     */
