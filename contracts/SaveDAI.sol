@@ -111,7 +111,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     /**
     * @notice This function calculates the premiums to be paid if a buyer wants to
     * buy ocDAI on Uniswap
-    * @param ocDaiTokensToBuy The number of ocDAI to buy
+    * @param _ocDaiTokensToBuy The number of ocDAI to buy
     */
     function premiumToPay(uint256 _ocDaiTokensToBuy) public view returns (uint256) {
         UniswapExchangeInterface ocDaiExchange = _getExchange(ocDaiAddress);
