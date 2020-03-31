@@ -26,6 +26,9 @@ const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const userWallet = '0xfc9362c9aa1e4c7460f1cf49466e385a507dfb2b';
 
+// amount of ocDAI, cDAI, saveDAI
+const amount = '489921671716';
+
 contract('SaveDAI', function (accounts) {
   beforeEach(async function () {
     savedai = await SaveDAI.new();
@@ -67,8 +70,6 @@ contract('SaveDAI', function (accounts) {
   });
 
   describe('premiumToPay', async function () {
-    // amount of ocDAI, cDAI, saveDAI
-    const amount = '489921671716';
     it('should return premium to pay for ocDAI tokens', async function () {
       const premium = await savedaiInstance.premiumToPay.call(amount);
 
