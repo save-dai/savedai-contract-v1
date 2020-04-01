@@ -81,7 +81,7 @@ contract('SaveDAI', function (accounts) {
       // amount of ocDAI, cDAI, saveDAI
       amount = '489921671716';
     });
-    it.only('should mint saveDAI tokens', async function () {
+    it('should mint saveDAI tokens', async function () {
       // premium in DAI needed for `amount` of ocDAI
       const premium = await savedaiInstance.premiumToPay.call(amount);
 
@@ -165,7 +165,7 @@ contract('SaveDAI', function (accounts) {
 
   describe('saveDaiPriceInDaiCurrent', function () {
     beforeEach(async function () {
-      saveDaiAmount = 100;
+      saveDaiAmount = '489921671716';
     });
     it('should first identify the cost of ocDai', async function () {
       let premium = await savedaiInstance.premiumToPay(saveDaiAmount);
@@ -184,8 +184,8 @@ contract('SaveDAI', function (accounts) {
       const daiAmount = await daiUniswapExchangeInterface.getTokenToEthOutputPrice(ethAmount);
       assert.equal(ocDAICost.toString(), (daiAmount.add(saveDaiAmount)).toString());
     });
-    it('should then identify the cost of cDai using _getCostOfcDAI', async function () {
-      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+    it.skip('should then identify the cost of cDai using _getCostOfcDAI', async function () {
+      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(saveDaiAmount);
       transaction = new BN(transaction);
 
       saveDaiAmount = new BN(saveDaiAmount);
@@ -200,12 +200,13 @@ contract('SaveDAI', function (accounts) {
       cDaiCost = new BN(cDaiCost);
 
       let exchangeRateStored = await cDaiInstance.exchangeRateStored();
+      exchangeRateStored = (exchangeRateStored.toString()) / 1e18;
       exchangeRateStored = new BN(exchangeRateStored);
 
       assert.equal(cDaiCost.toString(), (exchangeRateStored.mul(saveDaiAmount)).toString());
     });
     it('should return the value in DAI for a given amount of saveDAI', async function () {
-      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent(saveDaiAmount);
+      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(saveDaiAmount);
       transaction = new BN(transaction);
 
       saveDaiAmount = new BN(saveDaiAmount);

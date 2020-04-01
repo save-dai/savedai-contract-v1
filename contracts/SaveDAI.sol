@@ -53,6 +53,37 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     }
 
     /**
+    * @notice Will update the token name
+    * @param _newName The new name for the token
+    * @return Returns the new token name
+    */
+    function updateTokenName(string memory _newName)
+        public
+        onlyOwner
+    {
+        require(bytes(_newName).length > 0, 'The _newName argument must not be empty');
+        emit UpdateTokenName(name(), _newName);
+        _name = _newName;
+    }
+
+    /**
+    * @notice Used to override name() in ERC20Detailed if updateTokenName has been called
+    * @return Returns the new token name
+    */
+    function name()
+        public
+        view
+        returns (string memory)
+    {
+        if (bytes(_name).length == 0) {
+            return super.name();
+        }
+        else {
+            return _name;
+        }
+    }
+
+    /**
     * @notice This function mints saveDAI tokens
     * @param _amount The number of saveDAI to mint
     */
@@ -61,8 +92,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         uint256 paymentForPremium = premiumToPay(_amount);
 
         // calculate DAI needed to mint _amount of cDAI
-        uint256 exchangeRate = cDai.exchangeRateCurrent();
-        uint256 amountInDAI = _amount.mul(exchangeRate).div(10**18);
+        uint256 amountInDAI = _getCostOfcDAI(_amount);
 
         // total amount of DAI we need to transfer
         uint256 totalTransfer = paymentForPremium.add(amountInDAI);
@@ -84,27 +114,6 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         emit Mint(_amount);
 
         return true;
-    }
-
-    function exerciseOCDAI(uint256 _amount) public {
-        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-        require(ocDai.isExerciseWindow(), "Must be in exercise window");
-
-        // approve ocDai contract to spend both ocDai and cDai
-        ocDai.approve(address(ocDaiAddress), _amount);
-        cDai.approve(address(ocDaiAddress), _amount);
-
-        uint256 balanceBefore = address(this).balance;
-        // for hackathon just hard code the main vault owner
-
-        // address[] memory vaultOwners = [0x9e68B67660c223B3E0634D851F5DF821E0E17D84];
-        ocDai.exercise(_amount);
-
-        uint256 balanceAfter = address(this).balance;
-        uint256 deltaEth = balanceAfter.sub(balanceBefore);
-        address(msg.sender).transfer(deltaEth);
-        super._burn(msg.sender, _amount);
-        // TODO: emit ExerciseInsurance(_amount);
     }
 
     /**
@@ -129,43 +138,39 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
     * @return The value in DAI
     */
-    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public view returns (uint256) {
+    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
         uint256 ocDaiCost = premiumToPay(_saveDaiAmount).add(_saveDaiAmount);
         return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
     }
 
-    /**
-    * @notice Will update the token name
-    * @param _newName The new name for the token
-    * @return Returns the new token name
-    */
-    function updateTokenName(string memory _newName)
-        public
-        onlyOwner
-    {
-        require(bytes(_newName).length > 0, 'The _newName argument must not be empty');
-        emit UpdateTokenName(name(), _newName);
-        _name = _newName;
-    }
+    function exerciseOCDAI(uint256 _amount) public {
+        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
+        require(ocDai.isExerciseWindow(), "Must be in exercise window");
 
-    /**
-    * @notice Used to override name() in ERC20Detailed if updateTokenName has been called
-    * @return Returns the new token name
-    */
-    function name() public view returns (string memory)
-    {
-        if (bytes(_name).length == 0) { return super.name();
-    }
-        else { return _name; }
+        // approve ocDai contract to spend both ocDai and cDai
+        ocDai.approve(address(ocDaiAddress), _amount);
+        cDai.approve(address(ocDaiAddress), _amount);
+
+        uint256 balanceBefore = address(this).balance;
+        // for hackathon just hard code the main vault owner
+
+        // address[] memory vaultOwners = [0x9e68B67660c223B3E0634D851F5DF821E0E17D84];
+        ocDai.exercise(_amount);
+
+        uint256 balanceAfter = address(this).balance;
+        uint256 deltaEth = balanceAfter.sub(balanceBefore);
+        address(msg.sender).transfer(deltaEth);
+        super._burn(msg.sender, _amount);
+        // TODO: emit ExerciseInsurance(_amount);
     }
 
     /*
     * Internal functions
     */
-    function _getCostOfcDAI(uint256 _saveDaiAmount) internal view returns (uint256) {
-        // Determine the cost in cDAI given the _saveDaiAmount provided
-        uint256 cDaiCost = _saveDaiAmount.mul(cDai.exchangeRateStored());
-        return cDaiCost;
+    function _getCostOfcDAI(uint256 _amount) internal returns (uint256) {
+        // calculate DAI needed to mint _amount of cDAI
+        uint256 exchangeRate = cDai.exchangeRateCurrent();
+        return _amount.mul(exchangeRate).div(10**18);
     }
 
     /**
