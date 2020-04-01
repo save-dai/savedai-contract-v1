@@ -62,15 +62,11 @@ contract SaveDAI is ERC20, ERC20Detailed {
         );
 
         uint256 ocDAItokens = _uniswapBuyOCDAI(paymentForPremium);
+        require(ocDAItokens == _amount, "ocDAI tokens purchased must equal _amount");
+
         _mintcDAI(amountInDAI);
 
-        // mint saveDAI tokens
         super._mint(msg.sender, _amount);
-
-        uint256 saveDAItokens = balanceOf(msg.sender);
-
-        require(ocDAItokens == _amount, "ocDAI tokens purchased must equal _amount");
-        require(saveDAItokens == _amount, "saveDAI tokens minted must equal _amount");
 
         return true;
     }

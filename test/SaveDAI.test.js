@@ -85,7 +85,7 @@ contract('SaveDAI', function (accounts) {
         const premium = await savedaiInstance.premiumToPay.call(amount);
 
         // amount of DAI needed to mint `amount` of cDAI
-        let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
+        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
         exchangeRate = (exchangeRate.toString()) / 1e18;
         let amountInDAI = amount * exchangeRate;
         amountInDAI= new BN(amountInDAI.toString());
@@ -122,7 +122,7 @@ contract('SaveDAI', function (accounts) {
         const premium = await savedaiInstance.premiumToPay.call(amount);
 
         // amount of DAI needed to mint `amount` of cDAI
-        let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
+        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
         exchangeRate = (exchangeRate.toString()) / 1e18;
         let amountInDAI = amount * exchangeRate;
         amountInDAI= new BN(amountInDAI.toString());
