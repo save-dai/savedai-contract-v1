@@ -27,6 +27,11 @@ const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const userWallet = '0xfc9362c9aa1e4c7460f1cf49466e385a507dfb2b';
 
 contract('SaveDAI', function (accounts) {
+  // amount of ocDAI, cDAI, saveDAI we want to mint
+  amount = '489921671716';
+  owner = accounts[0];
+  notOwner = accounts[1];
+
   beforeEach(async function () {
     savedai = await SaveDAI.new();
     savedaiAddress = savedai.address;
@@ -45,9 +50,6 @@ contract('SaveDAI', function (accounts) {
     const daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
     daiExchange = await UniswapExchangeInterface.at(daiExchangeAddress);
 
-    owner = accounts[0];
-    notOwner = accounts[1];
-
     // Send 0.1 eth to userAddress to have gas to send an ERC20 tx.
     await web3.eth.sendTransaction({
       from: accounts[0],
@@ -64,33 +66,17 @@ contract('SaveDAI', function (accounts) {
     const ethBalance = await balance.current(userWallet);
     expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
-  it('should return premium to pay for ocDAI tokens', async function () {
-    // amount of ocDAI, cDAI, saveDAI
-    const amount = '489921671716';
-
-    const premium = await savedaiInstance.premiumToPay.call(amount);
-
-    // use exchange directly
-    const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice.call(amount);
-    const premiumShouldBe = await daiExchange.getTokenToEthOutputPrice.call(ethToPay);
-
-    assert.equal(premium.toString(), premiumShouldBe.toString());
-  });
   describe('mint', async function () {
-    beforeEach(async function () {
-      // amount of ocDAI, cDAI, saveDAI
-      amount = '489921671716';
-    });
     it('should mint saveDAI tokens', async function () {
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(amount);
 
-      let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
       exchangeRate = (exchangeRate.toString()) / 1e18;
       let amountInDAI = amount * exchangeRate;
       amountInDAI= new BN(amountInDAI.toString());
 
-      let totalTransfer = premium.add(amountInDAI);
+      const totalTransfer = premium.add(amountInDAI);
       largerAmount = totalTransfer.add(new BN(ether('0.1')));
 
       await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
@@ -120,7 +106,7 @@ contract('SaveDAI', function (accounts) {
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(amount);
 
-      let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
       exchangeRate = (exchangeRate.toString()) / 1e18;
       let amountInDAI = amount * exchangeRate;
       amountInDAI= new BN(amountInDAI.toString());
@@ -139,7 +125,6 @@ contract('SaveDAI', function (accounts) {
       console.log('totalTransfer', totalTransfer.toString());
       console.log('difference in userWallet DAI balance', diff.toString());
       // assert.equal(totalTransfer.toString(), diff.toString());
-      // DIFFERENCE is 1922164195328
     });
     it('should emit the amount of tokens minted', async function () {
       // calculate amount needed for approval
@@ -153,43 +138,52 @@ contract('SaveDAI', function (accounts) {
       expectEvent.inLogs(logs, 'Mint');
     });
   });
+  describe('premiumToPay', function () {
+    it('should return premium to pay for ocDAI tokens', async function () {
+      const premium = await savedaiInstance.premiumToPay.call(amount);
+
+      // use exchange directly
+      const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice.call(amount);
+      const premiumShouldBe = await daiExchange.getTokenToEthOutputPrice.call(ethToPay);
+
+      assert.equal(premium.toString(), premiumShouldBe.toString());
+    });
+  });
   describe('ExerciseInsurance', function () {
     it('should emit the amount of insurance to exercise', async function () {
       // TODO
     });
   });
 
+
   describe('saveDaiPriceInDaiCurrent', function () {
-    beforeEach(async function () {
-      saveDaiAmount = '489921671716';
-    });
     it('should first identify the cost of ocDai', async function () {
-      let premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      let premium = await savedaiInstance.premiumToPay(amount);
       premium = new BN(premium);
 
-      saveDaiAmount = new BN(saveDaiAmount);
+      amount = new BN(amount);
 
-      ocDAICost = premium.add(saveDaiAmount);
+      ocDAICost = premium.add(amount);
 
       ocDaiExchange = await uniswapFactoryInstance.getExchange(ocDaiAddress);
       const ocDaiUniswapExchangeInterface = await UniswapExchangeInterface.at(ocDaiExchange);
-      ethAmount = await ocDaiUniswapExchangeInterface.getEthToTokenOutputPrice(saveDaiAmount);
+      ethAmount = await ocDaiUniswapExchangeInterface.getEthToTokenOutputPrice(amount);
 
       daiExchange = await uniswapFactoryInstance.getExchange(daiAddress);
       const daiUniswapExchangeInterface = await UniswapExchangeInterface.at(daiExchange);
       const daiAmount = await daiUniswapExchangeInterface.getTokenToEthOutputPrice(ethAmount);
-      assert.equal(ocDAICost.toString(), (daiAmount.add(saveDaiAmount)).toString());
+      assert.equal(ocDAICost.toString(), (daiAmount.add(amount)).toString());
     });
     it.skip('should then identify the cost of cDai using _getCostOfcDAI', async function () {
-      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(saveDaiAmount);
+      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount);
       transaction = new BN(transaction);
 
-      saveDaiAmount = new BN(saveDaiAmount);
+      amount = new BN(amount);
 
-      let premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      let premium = await savedaiInstance.premiumToPay(amount);
       premium = new BN(premium);
 
-      let ocDAICost = premium.add(saveDaiAmount);
+      let ocDAICost = premium.add(amount);
       ocDAICost = new BN(ocDAICost);
 
       let cDaiCost = transaction.sub(ocDAICost);
@@ -199,18 +193,18 @@ contract('SaveDAI', function (accounts) {
       exchangeRateStored = (exchangeRateStored.toString()) / 1e18;
       exchangeRateStored = new BN(exchangeRateStored);
 
-      assert.equal(cDaiCost.toString(), (exchangeRateStored.mul(saveDaiAmount)).toString());
+      assert.equal(cDaiCost.toString(), (exchangeRateStored.mul(amount)).toString());
     });
     it('should return the value in DAI for a given amount of saveDAI', async function () {
-      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(saveDaiAmount);
+      let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount);
       transaction = new BN(transaction);
 
-      saveDaiAmount = new BN(saveDaiAmount);
+      amount = new BN(amount);
 
-      let premium = await savedaiInstance.premiumToPay(saveDaiAmount);
+      let premium = await savedaiInstance.premiumToPay(amount);
       premium = new BN(premium);
 
-      let ocDAICost = premium.add(saveDaiAmount);
+      let ocDAICost = premium.add(amount);
       ocDAICost = new BN(ocDAICost);
 
       let  cDaiCost = transaction.sub(ocDAICost);
