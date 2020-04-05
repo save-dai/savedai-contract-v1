@@ -88,27 +88,26 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _amount The number of saveDAI to mint
     */
     function mint(uint256 _amount) external returns (bool) {
-        // calculate DAI needed to mint _amount of cDAI and mint
+        // calculate DAI needed to mint _amount of cDAI and mint tokens
         uint256 amountInDAI = _getCostOfcDAI(_amount);
 
         require(dai.balanceOf(msg.sender) >= amountInDAI, "Must have sufficient balance");
 
-        // transfer total DAI needed for ocDAI tokens and cDAI tokens
+        // transfer DAI needed for cDAI tokens
         dai.transferFrom(
             msg.sender,
             address(this),
             amountInDAI
         );
-
         _mintcDAI(amountInDAI);
-        uint256 cDAItokens = cDai.balanceOf(address(this));
 
-        // calculate how much DAI we need to pay for same amount of ocDAI tokens
+        // calculate how much DAI we need to pay to insure amount of cDAItokens
+        uint256 cDAItokens = cDai.balanceOf(address(this));
         uint256 paymentForPremium = premiumToPay(cDAItokens);
 
         require(dai.balanceOf(msg.sender) >= paymentForPremium, "Must have sufficient balance");
 
-        // transfer total DAI needed for ocDAI tokens and cDAI tokens
+        // transfer DAI needed for premium for ocDAI tokens
         dai.transferFrom(
             msg.sender,
             address(this),
