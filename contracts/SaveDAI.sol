@@ -88,29 +88,37 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _amount The number of saveDAI to mint
     */
     function mint(uint256 _amount) external returns (bool) {
-        // calculate how much DAI we need to pay for _amount of ocDAI tokens
-        uint256 paymentForPremium = premiumToPay(_amount);
-
-        // calculate DAI needed to mint _amount of cDAI
+        // calculate DAI needed to mint _amount of cDAI and mint
         uint256 amountInDAI = _getCostOfcDAI(_amount);
 
-        // total amount of DAI we need to transfer
-        uint256 totalTransfer = paymentForPremium.add(amountInDAI);
-
-        require(dai.balanceOf(msg.sender) >= totalTransfer, "Must have sufficient balance");
+        require(dai.balanceOf(msg.sender) >= amountInDAI, "Must have sufficient balance");
 
         // transfer total DAI needed for ocDAI tokens and cDAI tokens
         dai.transferFrom(
             msg.sender,
             address(this),
-            totalTransfer
+            amountInDAI
+        );
+
+        _mintcDAI(amountInDAI);
+        uint256 cDAItokens = cDai.balanceOf(address(this));
+
+        // calculate how much DAI we need to pay for same amount of ocDAI tokens
+        uint256 paymentForPremium = premiumToPay(cDAItokens);
+
+        require(dai.balanceOf(msg.sender) >= paymentForPremium, "Must have sufficient balance");
+
+        // transfer total DAI needed for ocDAI tokens and cDAI tokens
+        dai.transferFrom(
+            msg.sender,
+            address(this),
+            paymentForPremium
         );
 
         uint256 ocDAItokens = _uniswapBuyOCDAI(paymentForPremium);
-        require(ocDAItokens == _amount, "ocDAI tokens purchased must equal _amount");
-        _mintcDAI(amountInDAI);
+        require(ocDAItokens == cDAItokens, "ocDAI tokens purchased must equal amount of cDAItokens minted");
 
-        super._mint(msg.sender, _amount);
+        super._mint(msg.sender, ocDAItokens);
         emit Mint(_amount);
 
         return true;

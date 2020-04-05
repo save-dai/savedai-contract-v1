@@ -82,27 +82,23 @@ contract('SaveDAI', function (accounts) {
       amount = '489921671716';
     });
     it('should mint saveDAI tokens', async function () {
-      // premium in DAI needed for `amount` of ocDAI
+      // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(amount);
 
-      // amount of DAI needed to mint `amount` of cDAI
-      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
       exchangeRate = (exchangeRate.toString()) / 1e18;
       let amountInDAI = amount * exchangeRate;
       amountInDAI= new BN(amountInDAI.toString());
 
-      // calculate total amount of DAI needed for approval
       let totalTransfer = premium.add(amountInDAI);
-      totalTransfer = totalTransfer.add(new BN(ether('0.1')));
+      largerAmount = totalTransfer.add(new BN(ether('0.1')));
 
-      // approve saveDAI contract
-      await daiInstance.approve(savedaiAddress, totalTransfer, { from: userWallet });
+      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
 
       // mint saveDAI tokens
       await savedaiInstance.mint(amount, { from: userWallet });
 
       const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-      assert.equal(amount, ocDAIbalance);
       console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString());
 
       const cDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
@@ -110,7 +106,9 @@ contract('SaveDAI', function (accounts) {
 
       const saveDaiMinted = await savedaiInstance.balanceOf(userWallet);
       console.log('saveDAI tokens minted, in userWallet', saveDaiMinted.toString());
-      assert.equal(amount, saveDaiMinted);
+      // all token balances should match
+      assert.equal(cDAIbalance.toString(), saveDaiMinted.toString());
+      assert.equal(ocDAIbalance.toString(), saveDaiMinted.toString());
 
       let underlying = await cDaiInstance.balanceOfUnderlying.call(savedaiAddress);
       underlying = underlying / 1e18;
@@ -119,21 +117,18 @@ contract('SaveDAI', function (accounts) {
     it('should decrease userWallet DAI balance', async function () {
       const initialBalance = await daiInstance.balanceOf(userWallet);
 
-      // premium in DAI needed for `amount` of ocDAI
+      // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(amount);
 
-      // amount of DAI needed to mint `amount` of cDAI
-      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
       exchangeRate = (exchangeRate.toString()) / 1e18;
       let amountInDAI = amount * exchangeRate;
       amountInDAI= new BN(amountInDAI.toString());
 
-      // calculate total amount of DAI needed for approval
       const totalTransfer = premium.add(amountInDAI);
-      largeAmount = totalTransfer.add(new BN(ether('0.1')));
+      largerAmount = totalTransfer.add(new BN(ether('0.1')));
 
-      // approve saveDAI contract
-      await daiInstance.approve(savedaiAddress, largeAmount, { from: userWallet });
+      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
 
       // mint saveDAI tokens
       await savedaiInstance.mint(amount, { from: userWallet });
@@ -144,6 +139,7 @@ contract('SaveDAI', function (accounts) {
       console.log('totalTransfer', totalTransfer.toString());
       console.log('difference in userWallet DAI balance', diff.toString());
       // assert.equal(totalTransfer.toString(), diff.toString());
+      // DIFFERENCE is 1922164195328
     });
     it('should emit the amount of tokens minted', async function () {
       // calculate amount needed for approval
