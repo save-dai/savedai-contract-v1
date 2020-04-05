@@ -4,12 +4,22 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./lib/UniswapExchangeInterface.sol";
 import "./lib/UniswapFactoryInterface.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 
-contract SaveDAI is ERC20, ERC20Detailed {
+contract SaveDAI is ERC20, ERC20Detailed, Ownable {
+    using SafeMath for uint256;
+
+    /***************
+    GLOBAL CONSTANTS
+    ***************/
+    uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
+    uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
+
     // mainnet addresses
     address public daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public ocDaiAddress = 0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33;
@@ -17,31 +27,128 @@ contract SaveDAI is ERC20, ERC20Detailed {
     address public uniswapFactoryAddress = 0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95;
 
     UniswapFactoryInterface public uniswapFactory;
+    UniswapExchangeInterface public daiUniswapExchange;
     CTokenInterface public cDai;
     OTokenInterface public ocDai;
     IERC20 public dai;
 
-    constructor() ERC20Detailed("SaveDAI", "SD", 18)
-        public {
-          cDai = CTokenInterface(cDaiAddress);
-          ocDai = OTokenInterface(ocDaiAddress);
-          dai = IERC20(daiAddress);
-          uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
+    // Will override the private _name variable in ERC20Detailed if token _name is updated
+    string private _name;
+
+    /***************
+    EVENTS
+    ***************/
+    event Mint(uint256 _amount);
+    event ExerciseInsurance(uint256 _amount);
+    event UpdateTokenName(string _oldName, string _newName);
+
+    constructor() ERC20Detailed("SaveDAI", "SD", 8)
+        public
+    {
+        cDai = CTokenInterface(cDaiAddress);
+        ocDai = OTokenInterface(ocDaiAddress);
+        dai = IERC20(daiAddress);
+        uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
+        daiUniswapExchange = _getExchange(daiAddress);
+    }
+
+    /**
+    * @notice Will update the token name
+    * @param _newName The new name for the token
+    * @return Returns the new token name
+    */
+    function updateTokenName(string memory _newName)
+        public
+        onlyOwner
+    {
+        require(bytes(_newName).length > 0, 'The _newName argument must not be empty');
+        emit UpdateTokenName(name(), _newName);
+        _name = _newName;
+    }
+
+    /**
+    * @notice Used to override name() in ERC20Detailed if updateTokenName has been called
+    * @return Returns the new token name
+    */
+    function name()
+        public
+        view
+        returns (string memory)
+    {
+        if (bytes(_name).length == 0) {
+            return super.name();
         }
+        else {
+            return _name;
+        }
+    }
 
-    function mint(address _to, uint256 _amount) external payable returns (bool) {
-        // purchase _amount of ocDai from uniswap (call internal _buy function))
-        // _buy(_amount);
+    /**
+    * @notice This function mints saveDAI tokens
+    * @param _amount The number of saveDAI to mint
+    */
+    function mint(uint256 _amount) external returns (bool) {
+        // calculate DAI needed to mint _amount of cDAI and mint
+        uint256 amountInDAI = _getCostOfcDAI(_amount);
 
-        // // getExchangeRate for cDai from compound
-        // uint256 cDAIExchangeRate = cDai.exchangeRateCurrent();
-        // uint256 _daiAmount = _amount * cDAIExchangeRate;
-        // // mint cDai
-        // uint cDAIAmount = cDai.mint(_daiAmount);
-        // require(cDAIAmount == _amount, "cDai and ocDai amounts must match");
+        require(dai.balanceOf(msg.sender) >= amountInDAI, "Must have sufficient balance");
 
-        super._mint(_to, _amount);
+        // transfer total DAI needed for ocDAI tokens and cDAI tokens
+        dai.transferFrom(
+            msg.sender,
+            address(this),
+            amountInDAI
+        );
+
+        _mintcDAI(amountInDAI);
+        uint256 cDAItokens = cDai.balanceOf(address(this));
+
+        // calculate how much DAI we need to pay for same amount of ocDAI tokens
+        uint256 paymentForPremium = premiumToPay(cDAItokens);
+
+        require(dai.balanceOf(msg.sender) >= paymentForPremium, "Must have sufficient balance");
+
+        // transfer total DAI needed for ocDAI tokens and cDAI tokens
+        dai.transferFrom(
+            msg.sender,
+            address(this),
+            paymentForPremium
+        );
+
+        uint256 ocDAItokens = _uniswapBuyOCDAI(paymentForPremium);
+        require(ocDAItokens == cDAItokens, "ocDAI tokens purchased must equal amount of cDAItokens minted");
+
+        super._mint(msg.sender, ocDAItokens);
+        emit Mint(_amount);
+
         return true;
+    }
+
+    /**
+    * @notice This function calculates the premiums to be paid if a buyer wants to
+    * buy ocDAI on Uniswap
+    * @param _ocDaiTokensToBuy The number of ocDAI to buy
+    */
+    function premiumToPay(uint256 _ocDaiTokensToBuy) public view returns (uint256) {
+        UniswapExchangeInterface ocDaiExchange = _getExchange(ocDaiAddress);
+
+        // get the amount of ETH that needs to be paid for _ocDaiTokensToBuy.
+        uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
+            _ocDaiTokensToBuy
+        );
+
+        // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
+        return daiUniswapExchange.getTokenToEthOutputPrice(ethToPay);
+    }
+
+    /**
+    * @notice Returns the value in DAI for a given amount of saveDAI provided
+    * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
+    * @return The value in DAI
+    */
+    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
+        uint256 ocDaiCost = premiumToPay(_saveDaiAmount).add(_saveDaiAmount);
+        return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
     }
 
     function exerciseOCDAI(uint256 _amount) public {
@@ -62,19 +169,59 @@ contract SaveDAI is ERC20, ERC20Detailed {
         uint256 deltaEth = balanceAfter.sub(balanceBefore);
         address(msg.sender).transfer(deltaEth);
         super._burn(msg.sender, _amount);
-      }
+        // TODO: emit ExerciseInsurance(_amount);
+    }
 
+    /*
+    * Internal functions
+    */
+    function _getCostOfcDAI(uint256 _amount) internal returns (uint256) {
+        // calculate DAI needed to mint _amount of cDAI
+        uint256 exchangeRate = cDai.exchangeRateCurrent();
+        return _amount.mul(exchangeRate).div(10**18);
+    }
 
-    function _buy(uint256 _amount) external returns (uint256) {
-        UniswapExchangeInterface uniswapExchange = UniswapExchangeInterface(uniswapFactory.getExchange(daiAddress));
-        // daiErc20.approve(address(uniswapExchange), _amount * 10);
-        // uint256 oTokens = uniswapExchange.tokenToTokenSwapInput (
-        //         _amount, // tokens sold
-        //         1, // min_tokens_bought
-        //         1, // min eth bought
-        //         now + 12000, // deadline
-        //         address(ocdaiAddress) // token address
-        // );
-        // return oTokens;
+    /**
+    * @notice This function buys ocDAI tokens on uniswap
+    * @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function
+    */
+    function _uniswapBuyOCDAI(uint256 _premium) internal returns (uint256) {
+
+        // saveDAI gives uniswap exchange allowance to transfer DAI tokens
+        dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER);
+
+        return daiUniswapExchange.tokenToTokenSwapInput (
+                _premium, // tokens sold
+                1, // min_tokens_bought
+                1, // min eth bought
+                LARGE_BLOCK_SIZE, // deadline
+                address(ocDai) // token address
+        );
+    }
+
+    /**
+    * @notice This function instantiates an interface for a given exchange's address
+    * @param _tokenAddress The token's address
+    * @return Returns the exchange interface nterface
+    */
+    function _getExchange(address _tokenAddress) internal view returns (UniswapExchangeInterface) {
+        UniswapExchangeInterface exchange = UniswapExchangeInterface(
+            uniswapFactory.getExchange(address(_tokenAddress))
+        );
+        return exchange;
+    }
+
+    /**
+    * @notice This function mints cDAI tokens
+    * @param _amount The amount of DAI tokens transferred to Compound
+    */
+    function _mintcDAI(uint256 _amount) internal returns (uint256) {
+
+        // saveDAI gives Compound allowance to transfer DAI tokens
+        dai.approve(cDaiAddress, LARGE_APPROVAL_NUMBER);
+
+        // mint cDai
+        uint256 cDAIAmount = cDai.mint(_amount);
+        return cDAIAmount;
     }
 }

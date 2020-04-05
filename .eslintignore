@@ -1,0 +1,3 @@
+**/test/abi/*.js
+**/migrations/*.js
+**/app/src/*.js
