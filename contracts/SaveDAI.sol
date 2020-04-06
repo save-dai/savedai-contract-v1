@@ -38,9 +38,10 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     /***************
     EVENTS
     ***************/
-    event Mint(uint256 _amount);
+    event Mint(uint256 _amount, address _recipient);
     event ExerciseInsurance(uint256 _amount);
     event UpdateTokenName(string _oldName, string _newName);
+    event ExchangeRate(uint256 _exchangeRateCurrent);
 
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
         public
@@ -118,7 +119,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         require(ocDAItokens == cDAItokens, "ocDAI tokens purchased must equal amount of cDAItokens minted");
 
         super._mint(msg.sender, ocDAItokens);
-        emit Mint(_amount);
+        emit Mint(_amount, msg.sender);
 
         return true;
     }
@@ -177,6 +178,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     function _getCostOfcDAI(uint256 _amount) internal returns (uint256) {
         // calculate DAI needed to mint _amount of cDAI
         uint256 exchangeRate = cDai.exchangeRateCurrent();
+        emit ExchangeRate(exchangeRate);
         return _amount.mul(exchangeRate).div(10**18);
     }
 

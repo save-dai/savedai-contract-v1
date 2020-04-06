@@ -74,7 +74,7 @@ contract('SaveDAI', function (accounts) {
       let exchangeRate = await cDaiInstance.exchangeRateStored.call();
       exchangeRate = (exchangeRate.toString()) / 1e18;
       let amountInDAI = amount * exchangeRate;
-      amountInDAI= new BN(amountInDAI.toString());
+      amountInDAI = new BN(amountInDAI.toString());
 
       const totalTransfer = premium.add(amountInDAI);
       largerAmount = totalTransfer.add(new BN(ether('0.1')));
@@ -100,29 +100,30 @@ contract('SaveDAI', function (accounts) {
       underlying = underlying / 1e18;
       console.log('underlying balance of cDAI tokens', underlying.toString());
     });
-    it('should decrease userWallet DAI balance', async function () {
+    it.skip('should decrease userWallet DAI balance', async function () {
       const initialBalance = await daiInstance.balanceOf(userWallet);
 
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(amount);
 
-      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
-      exchangeRate = (exchangeRate.toString()) / 1e18;
-      let amountInDAI = amount * exchangeRate;
-      amountInDAI= new BN(amountInDAI.toString());
-
-      const totalTransfer = premium.add(amountInDAI);
-      largerAmount = totalTransfer.add(new BN(ether('0.1')));
-
-      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
+      await daiInstance.approve(savedaiAddress, initialBalance, { from: userWallet });
 
       // mint saveDAI tokens
-      await savedaiInstance.mint(amount, { from: userWallet });
+      const transaction = await savedaiInstance.mint(amount, { from: userWallet });
+      let exchangeRateTransaction = await transaction.logs[0].args._exchangeRateCurrent;
+      exchangeRateTransaction = new BN(exchangeRateTransaction.toString()) / 1e18;
+
+      // calculate how much DAI is spent using value from ExchangeRate event
+      let daiFromExchangeRateEvent = exchangeRateTransaction * amount;
+      daiFromExchangeRateEvent = new BN(daiFromExchangeRateEvent.toString());
+
+      const daiTotalTransfer = premium.add(daiFromExchangeRateEvent);
 
       const endingBalance = await daiInstance.balanceOf(userWallet);
 
       const diff = initialBalance.sub(endingBalance);
-      console.log('totalTransfer', totalTransfer.toString());
+
+      console.log('daiTotalTransfer', daiTotalTransfer.toString());
       console.log('difference in userWallet DAI balance', diff.toString());
       // assert.equal(totalTransfer.toString(), diff.toString());
     });
