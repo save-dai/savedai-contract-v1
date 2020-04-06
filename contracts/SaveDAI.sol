@@ -110,7 +110,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
 
         // transfer DAI needed for premium for ocDAI tokens
         dai.transferFrom(
-            msg.sender, 
+            msg.sender,
             address(this),
             paymentForPremium
         );
@@ -153,19 +153,23 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
     }
 
-    function exerciseOCDAI(uint256 _amount) public {
+    /**
+     * @notice Called by anyone holding saveDAI tokens who wants to excercise the underlying
+     * ocDAI insurance. The caller transfers their saveDAI tokens and get paid out in ETH.
+     * @param _amount the number of saveDAI tokens
+     * @param vaultsToExerciseFrom the array of vaults to exercise from.
+     */
+    function exerciseInsurance(uint256 _amount, address payable[] memory vaultsToExerciseFrom) public {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
         require(ocDai.isExerciseWindow(), "Must be in exercise window");
 
         // approve ocDai contract to spend both ocDai and cDai
-        ocDai.approve(address(ocDaiAddress), _amount);
-        cDai.approve(address(ocDaiAddress), _amount);
+        ocDai.approve(address(ocDaiAddress), LARGE_APPROVAL_NUMBER);
+        cDai.approve(address(ocDaiAddress), LARGE_APPROVAL_NUMBER);
 
         uint256 balanceBefore = address(this).balance;
-        // for hackathon just hard code the main vault owner
 
-        // address[] memory vaultOwners = [0x9e68B67660c223B3E0634D851F5DF821E0E17D84];
-        ocDai.exercise(_amount);
+        ocDai.exercise(_amount, vaultsToExerciseFrom);
 
         uint256 balanceAfter = address(this).balance;
         uint256 deltaEth = balanceAfter.sub(balanceBefore);

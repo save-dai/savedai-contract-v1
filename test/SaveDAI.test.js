@@ -181,11 +181,6 @@ contract('SaveDAI', function (accounts) {
       assert.equal(premium.toString(), premiumShouldBe.toString());
     });
   });
-  describe('ExerciseInsurance', function () {
-    it('should emit the amount of insurance to exercise', async function () {
-      // TODO
-    });
-  });
   describe('saveDaiPriceInDaiCurrent', function () {
     it('should first identify the cost of ocDai', async function () {
       let premium = await savedaiInstance.premiumToPay(amount);
@@ -285,6 +280,38 @@ contract('SaveDAI', function (accounts) {
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
         await time.increase(increaseTime);
       });
+  describe('exerciseInsurance', function () {
+    beforeEach(async function() {
+      smallAmount = '48921671716';
+      // Calculate how much DAI is needed to approve
+      const premium = await savedaiInstance.premiumToPay.call(smallAmount);
+
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      exchangeRate = (exchangeRate.toString()) / 1e18;
+      let amountInDAI = smallAmount * exchangeRate;
+      amountInDAI= new BN(amountInDAI.toString());
+
+      const totalTransfer = premium.add(amountInDAI);
+      largerAmount = totalTransfer.add(new BN(ether('0.1')));
+
+      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
+
+      // mint saveDAI tokens
+      await savedaiInstance.mint(smallAmount, { from: userWallet });
+      saveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+    });
+    it.only('should work', async function () {
+      const hasVault = await ocDaiInstance.hasVault('0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4');
+      console.log('hasVault', hasVault);
+      const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+
+      const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
+      console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString());
+      console.log('saveDaiBalance', saveDaiBalance.toString());
+      await savedaiInstance.exerciseInsurance(saveDaiBalance, vaultArray, { from: userWallet });
+    });
+    it('should emit the amount of insurance to exercise', async function () {
+      // TODO
     });
   });
 
