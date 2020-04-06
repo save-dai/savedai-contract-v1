@@ -147,7 +147,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @return The value in DAI
     */
     function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
-        uint256 ocDaiCost = premiumToPay(_saveDaiAmount).add(_saveDaiAmount);
+        uint256 ocDaiCost = premiumToPay(_saveDaiAmount);
         return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
     }
 

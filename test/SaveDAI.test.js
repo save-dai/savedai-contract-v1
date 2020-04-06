@@ -100,7 +100,7 @@ contract('SaveDAI', function (accounts) {
       underlying = underlying / 1e18;
       console.log('underlying balance of cDAI tokens', underlying.toString());
     });
-    it.skip('should decrease userWallet DAI balance', async function () {
+    it('should decrease userWallet DAI balance', async function () {
       const initialBalance = await daiInstance.balanceOf(userWallet);
 
       // Calculate how much DAI is needed to approve
@@ -123,9 +123,10 @@ contract('SaveDAI', function (accounts) {
 
       const diff = initialBalance.sub(endingBalance);
 
-      console.log('daiTotalTransfer', daiTotalTransfer.toString());
-      console.log('difference in userWallet DAI balance', diff.toString());
-      // assert.equal(totalTransfer.toString(), diff.toString());
+      console.log('daiTotalTransfer', daiTotalTransfer.toString() / 1e18);
+      console.log('difference in userWallet DAI balance', diff.toString() / 1e18);
+      // TODO: Complete this test
+      // assert.equal((daiTotalTransfer.toString() / 1e18), (diff.toString() / 1e18));
     });
     it('should emit the amount of tokens minted', async function () {
       // calculate amount needed for approval
@@ -155,16 +156,10 @@ contract('SaveDAI', function (accounts) {
       // TODO
     });
   });
-
-
   describe('saveDaiPriceInDaiCurrent', function () {
     it('should first identify the cost of ocDai', async function () {
       let premium = await savedaiInstance.premiumToPay(amount);
       premium = new BN(premium);
-
-      amount = new BN(amount);
-
-      ocDAICost = premium.add(amount);
 
       ocDaiExchange = await uniswapFactoryInstance.getExchange(ocDaiAddress);
       const ocDaiUniswapExchangeInterface = await UniswapExchangeInterface.at(ocDaiExchange);
@@ -173,7 +168,7 @@ contract('SaveDAI', function (accounts) {
       daiExchange = await uniswapFactoryInstance.getExchange(daiAddress);
       const daiUniswapExchangeInterface = await UniswapExchangeInterface.at(daiExchange);
       const daiAmount = await daiUniswapExchangeInterface.getTokenToEthOutputPrice(ethAmount);
-      assert.equal(ocDAICost.toString(), (daiAmount.add(amount)).toString());
+      assert.equal(premium.toString(), daiAmount.toString());
     });
     it.skip('should then identify the cost of cDai using _getCostOfcDAI', async function () {
       let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount);
@@ -184,17 +179,17 @@ contract('SaveDAI', function (accounts) {
       let premium = await savedaiInstance.premiumToPay(amount);
       premium = new BN(premium);
 
-      let ocDAICost = premium.add(amount);
-      ocDAICost = new BN(ocDAICost);
-
-      let cDaiCost = transaction.sub(ocDAICost);
+      let cDaiCost = transaction.sub(premium);
       cDaiCost = new BN(cDaiCost);
 
       let exchangeRateStored = await cDaiInstance.exchangeRateStored();
       exchangeRateStored = (exchangeRateStored.toString()) / 1e18;
       exchangeRateStored = new BN(exchangeRateStored);
 
-      assert.equal(cDaiCost.toString(), (exchangeRateStored.mul(amount)).toString());
+      console.log('cDaiCost', cDaiCost.toString());
+      console.log('exchangeRateStored', exchangeRateStored.mul(amount).toString());
+
+      //assert.equal(cDaiCost.toString(), (exchangeRateStored.mul(amount)).toString());
     });
     it('should return the value in DAI for a given amount of saveDAI', async function () {
       let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount);
@@ -205,14 +200,11 @@ contract('SaveDAI', function (accounts) {
       let premium = await savedaiInstance.premiumToPay(amount);
       premium = new BN(premium);
 
-      let ocDAICost = premium.add(amount);
-      ocDAICost = new BN(ocDAICost);
-
-      let  cDaiCost = transaction.sub(ocDAICost);
+      let cDaiCost = transaction.sub(premium);
       cDaiCost = new BN(cDaiCost);
 
-      amountOfDAI = cDaiCost.add(ocDAICost);
-      assert.equal(amountOfDAI.toString(), (cDaiCost.add(ocDAICost).toString()));
+      amountOfDAI = cDaiCost.add(premium);
+      assert.equal(amountOfDAI.toString(), transaction.toString());
     });
   });
 
