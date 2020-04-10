@@ -42,6 +42,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     event ExerciseInsurance(uint256 _amount);
     event UpdateTokenName(string _oldName, string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
+    event RemoveInsurance(uint256 _amount);
 
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
         public
@@ -172,6 +173,20 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         address(msg.sender).transfer(deltaEth);
         super._burn(msg.sender, _amount);
         // TODO: emit ExerciseInsurance(_amount);
+    }
+
+    /**
+    * @notice This function will remove insurance
+    * @param _amount The amount of saveDAI tokens to unbundle
+    */
+    function removeInsurance(uint256 _amount) public {
+        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
+        if (ocDai.hasExpired()) {
+
+        } else {
+
+        }
+        emit RemoveInsurance(_amount);
     }
 
     /*

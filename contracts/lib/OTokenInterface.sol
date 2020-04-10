@@ -1,10 +1,11 @@
 pragma solidity ^0.5.0;
 
 // opyn interface
-contract OTokenInterface {
-    function exercise(uint256 oTokensToExercise) public payable;
+interface OTokenInterface {
+	function hasExpired() external view returns (bool);
+    function exercise(uint256 oTokensToExercise) external payable;
     function isExerciseWindow() external view returns (bool);
     function approve(address spender, uint256 amount) external returns (bool);
-    function oTokenExchangeRate() public returns (uint256, int32);
+    function oTokenExchangeRate() external returns (uint256, int32);
     function balanceOf(address account) external view returns (uint256);
 }

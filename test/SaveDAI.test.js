@@ -208,6 +208,37 @@ contract('SaveDAI', function (accounts) {
     });
   });
 
+  describe.only('removeInsurance', function () {
+    it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+      await expectRevert(savedaiInstance.removeInsurance(amount), 'Must have sufficient balance');
+    });
+    context('when ocDAI has expired', function () {
+      it('should burn _amount of ocDAI', async function () {
+
+      });
+      it('should transfer _amount of cDAI to msg.sender', async function () {
+
+      });
+      it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
+
+      });
+    });
+    context('when ocDAI has NOT expired', function () {
+      it('should swap _amount of ocDAI on Uniswap for DAI', async function () {
+
+      });
+      it('should deposit the new DAI into Compound for more cDAI', async function () {
+
+      });
+      it('should transfer the total amount of cDAI to msg.sender', async function () {
+
+      });
+      it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
+
+      });
+    });
+  });
+
   describe('updateTokenName', function () {
     it('should revert if not called by the owner', async function () {
       await expectRevert(savedaiInstance.updateTokenName('newTokenName', { from: notOwner }), 'Ownable: caller is not the owner');
@@ -237,6 +268,4 @@ contract('SaveDAI', function (accounts) {
       assert.strictEqual(newTokenName, 'newTokenName');
     });
   });
-
-
 });
