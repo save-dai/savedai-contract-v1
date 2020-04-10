@@ -119,7 +119,9 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         require(ocDAItokens == cDAItokens, "ocDAI tokens purchased must equal amount of cDAItokens minted");
 
         super._mint(msg.sender, ocDAItokens);
-        emit Mint(_amount, msg.sender);
+
+        uint256 amount = ocDAItokens;
+        emit Mint(amount, msg.sender);
 
         return true;
     }

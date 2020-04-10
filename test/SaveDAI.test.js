@@ -24,7 +24,7 @@ const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
-const userWallet = '0xfc9362c9aa1e4c7460f1cf49466e385a507dfb2b';
+const userWallet = '0x274d9e726844ab52e351e8f1272e7fc3f58b7e5f';
 
 contract('SaveDAI', function (accounts) {
   // amount of ocDAI, cDAI, saveDAI we want to mint
@@ -117,14 +117,14 @@ contract('SaveDAI', function (accounts) {
       let daiFromExchangeRateEvent = exchangeRateTransaction * amount;
       daiFromExchangeRateEvent = new BN(daiFromExchangeRateEvent.toString());
 
-      const daiTotalTransfer = premium.add(daiFromExchangeRateEvent);
+      const daiTotalTransfer = premium.add(daiFromExchangeRateEvent) / 1e18;
 
       const endingBalance = await daiInstance.balanceOf(userWallet);
 
-      const diff = initialBalance.sub(endingBalance);
+      const diff = initialBalance.sub(endingBalance) / 1e18;
 
-      console.log('daiTotalTransfer', daiTotalTransfer.toString() / 1e18);
-      console.log('difference in userWallet DAI balance', diff.toString() / 1e18);
+      console.log('daiTotalTransfer', daiTotalTransfer.toString());
+      console.log('difference in userWallet DAI balance', diff.toString());
       // TODO: Complete this test
       // assert.equal((daiTotalTransfer.toString() / 1e18), (diff.toString() / 1e18));
     });
