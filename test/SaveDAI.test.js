@@ -10,6 +10,7 @@ const {
   balance,
   expectRevert,
   expectEvent,
+  time,
 } = require('@openzeppelin/test-helpers');
 
 const SaveDAI = artifacts.require('SaveDAI');
@@ -31,6 +32,9 @@ contract('SaveDAI', function (accounts) {
   amount = '489921671716';
   owner = accounts[0];
   notOwner = accounts[1];
+
+  // Number of seconds to increase to ensure February 21st, 2021 has elapsed
+  increaseTime = 26409094;
 
   beforeEach(async function () {
     savedai = await SaveDAI.new();
@@ -208,20 +212,21 @@ contract('SaveDAI', function (accounts) {
     });
   });
 
-  describe.only('removeInsurance', function () {
+  describe('removeInsurance', function () {
+    beforeEach(async function () {
+      const initialBalance = await daiInstance.balanceOf(userWallet);
+
+      // Calculate how much DAI is needed to approve
+      const premium = await savedaiInstance.premiumToPay.call(amount);
+
+      await daiInstance.approve(savedaiAddress, initialBalance, { from: userWallet });
+
+      // mint saveDAI tokens
+      await savedaiInstance.mint(amount, { from: userWallet });
+    });
+
     it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
       await expectRevert(savedaiInstance.removeInsurance(amount), 'Must have sufficient balance');
-    });
-    context('when ocDAI has expired', function () {
-      it('should burn _amount of ocDAI', async function () {
-
-      });
-      it('should transfer _amount of cDAI to msg.sender', async function () {
-
-      });
-      it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
-
-      });
     });
     context('when ocDAI has NOT expired', function () {
       it('should swap _amount of ocDAI on Uniswap for DAI', async function () {
@@ -235,6 +240,28 @@ contract('SaveDAI', function (accounts) {
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
 
+      });
+    });
+    context('when ocDAI has expired', function () {
+      it.only('should transfer _amount of cDAI to msg.sender', async function () {
+        await time.increase(increaseTime);
+        initialBalance = await cDaiInstance.balanceOf(userWallet);
+
+        let saveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+        saveDaiBalance = new BN(saveDaiBalance).toString();
+
+        console.log('saveDaiBalance', saveDaiBalance);
+        console.log('amount', amount);
+
+        await savedaiInstance.removeInsurance(saveDaiBalance);
+        /*
+        finalUserBalance = await cDaiInstance.balanceOf(userWallet);
+        diff = finalUserBalance - initialUserBalance;
+        assert.equal(diff, amount);
+        */
+      });
+      it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
+        await time.increase(increaseTime);
       });
     });
   });
