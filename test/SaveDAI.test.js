@@ -212,7 +212,10 @@ contract('SaveDAI', function (accounts) {
     });
   });
 
-  describe('removeInsurance', function () {
+  describe.skip('removeInsurance', function () {
+    it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+      await expectRevert(savedaiInstance.removeInsurance(amount), 'Must have sufficient balance');
+    });
     beforeEach(async function () {
       const initialBalance = await daiInstance.balanceOf(userWallet);
 
@@ -223,10 +226,6 @@ contract('SaveDAI', function (accounts) {
 
       // mint saveDAI tokens
       await savedaiInstance.mint(amount, { from: userWallet });
-    });
-
-    it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-      await expectRevert(savedaiInstance.removeInsurance(amount), 'Must have sufficient balance');
     });
     context('when ocDAI has NOT expired', function () {
       it('should swap _amount of ocDAI on Uniswap for DAI', async function () {
@@ -243,22 +242,25 @@ contract('SaveDAI', function (accounts) {
       });
     });
     context('when ocDAI has expired', function () {
-      it.only('should transfer _amount of cDAI to msg.sender', async function () {
+      it('should transfer _amount of cDAI to msg.sender', async function () {
         await time.increase(increaseTime);
-        initialBalance = await cDaiInstance.balanceOf(userWallet);
+
+        let initialBalance = await cDaiInstance.balanceOf(userWallet);
+        initialBalance  = new BN(initialBalance).toString();
 
         let saveDaiBalance = await savedaiInstance.balanceOf(userWallet);
         saveDaiBalance = new BN(saveDaiBalance).toString();
 
-        console.log('saveDaiBalance', saveDaiBalance);
-        console.log('amount', amount);
-
         await savedaiInstance.removeInsurance(saveDaiBalance);
-        /*
-        finalUserBalance = await cDaiInstance.balanceOf(userWallet);
-        diff = finalUserBalance - initialUserBalance;
-        assert.equal(diff, amount);
-        */
+
+        let finalUserBalance = await cDaiInstance.balanceOf(userWallet);
+        finalUserBalance = new BN(finalUserBalance).toString();
+
+        diff = finalUserBalance - initialBalance;
+        console.log('initialBalance', initialBalance);
+        console.log('finalUserBalance', finalUserBalance);
+
+        //assert.equal(diff, amount);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
         await time.increase(increaseTime);

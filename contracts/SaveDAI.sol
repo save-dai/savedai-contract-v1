@@ -179,10 +179,11 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _amount The amount of saveDAI tokens to unbundle
     */
     function removeInsurance(uint256 _amount) public {
+        // Account for rounding issue
         uint256 rounding =_amount.sub(balanceOf(msg.sender));
         require(balanceOf(msg.sender) >= _amount.sub(rounding), "Must have sufficient balance");
         if (ocDai.hasExpired()) {
-            cDai.transfer(msg.sender, _amount);
+            cDai.transferFrom(address(this), msg.sender, _amount);
             _burn(msg.sender, _amount.sub(rounding));
         } else {
 
@@ -239,9 +240,8 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         uint256 initialBalance = cDai.balanceOf(address(this));
         // saveDAI gives Compound allowance to transfer DAI tokens
         dai.approve(cDaiAddress, LARGE_APPROVAL_NUMBER);
-
         // mint cDai
-        uint256 cDAIAmount = cDai.mint(_amount);
+        cDai.mint(_amount);
         // identify the updated balance of the saveDAI contract
         uint256 updatedBalance = cDai.balanceOf(address(this));
         // return number of cDAI tokens minted
