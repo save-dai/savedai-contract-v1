@@ -6,7 +6,7 @@ const helpers = require('./helpers/helpers.js');
 
 const { expect } = require('chai');
 const {
-  BN,           // Big Number support
+  BN,
   ether,
   time,
   balance,
@@ -341,7 +341,6 @@ contract('SaveDAI', function (accounts) {
         const endingcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
         assert.equal(initialocDAIbalance.sub(endingocDAIbalance).toString(), amtToExercise.toString());
         assert.equal(initialcDAIbalance.sub(endingcDAIbalance).toString(), amtToExercise.toString());
-
       });
       it('should emit the amount of insurance to exercise', async function () {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
@@ -354,7 +353,7 @@ contract('SaveDAI', function (accounts) {
         );
 
         // check that the right events were emitted
-        expectEvent(txReceipt, 'exerciseInsurance');
+        expectEvent(txReceipt, 'ExerciseInsurance');
       });
       it('should revert if user does not have sufficient balance', async function () {
         // use larger number for amtToExercise
