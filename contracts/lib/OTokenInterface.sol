@@ -11,4 +11,6 @@ interface OTokenInterface {
     function approve(address spender, uint256 amount) external returns (bool);
     function oTokenExchangeRate() external returns (uint256, int32);
     function balanceOf(address account) external view returns (uint256);
+    function totalSupply() external view returns (uint256);
+    function underlyingRequiredToExercise(uint256 oTokensToExercise) public view returns (uint256);
 }

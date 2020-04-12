@@ -8,6 +8,7 @@ const { expect } = require('chai');
 const {
   BN,           // Big Number support
   ether,
+  time,
   balance,
   expectRevert,
   expectEvent,
@@ -282,7 +283,7 @@ contract('SaveDAI', function (accounts) {
       });
   describe('exerciseInsurance', function () {
     beforeEach(async function() {
-      smallAmount = '48921671716';
+      smallAmount = '4892167171';
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(smallAmount);
 
@@ -298,20 +299,95 @@ contract('SaveDAI', function (accounts) {
 
       // mint saveDAI tokens
       await savedaiInstance.mint(smallAmount, { from: userWallet });
-      saveDaiBalance = await savedaiInstance.balanceOf(userWallet);
     });
-    it.only('should work', async function () {
-      const hasVault = await ocDaiInstance.hasVault('0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4');
-      console.log('hasVault', hasVault);
-      const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+    context('during expiry window', function () {
+      it('should be able to call exercise', async function () {
+        const amtToExercise = await savedaiInstance.balanceOf(userWallet);
+        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+  
+        const initialocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
+        const initialcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
 
-      const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-      console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString());
-      console.log('saveDaiBalance', saveDaiBalance.toString());
-      await savedaiInstance.exerciseInsurance(saveDaiBalance, vaultArray, { from: userWallet });
+        const totalSupplyBefore = await ocDaiInstance.totalSupply();
+
+        initialETH = await balance.current(userWallet);
+
+        txReceipt = await savedaiInstance.exerciseInsurance(
+          amtToExercise, 
+          vaultArray, 
+          {from: userWallet}
+        );
+        
+        const tx = await web3.eth.getTransaction(txReceipt.tx);
+        gasUsed = new BN(txReceipt.receipt.gasUsed);
+        gasPrice = new BN(tx.gasPrice);
+
+        const deltaEth = txReceipt.receipt.logs[5].args[1];
+
+        const expectedEndETHBalance = initialETH
+        .sub(gasUsed.mul(gasPrice))
+        .add(deltaEth);
+
+        // check that the user gets the right amount of ETH back
+        finalETH = await balance.current(userWallet);
+        assert.equal(expectedEndETHBalance.toString(), finalETH.toString());
+
+        // check the supply of ocDAI tokens has changed
+        const totalSupplyAfter = await ocDaiInstance.totalSupply();
+        assert.equal(totalSupplyBefore.sub(new BN(amtToExercise)).toString(), totalSupplyAfter.toString());
+
+        // check that cDAI and ocDAI were transferred
+        const endingocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
+        const endingcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
+        assert.equal(initialocDAIbalance.sub(endingocDAIbalance).toString(), amtToExercise.toString());
+        assert.equal(initialcDAIbalance.sub(endingcDAIbalance).toString(), amtToExercise.toString());
+
+      });
+      it('should emit the amount of insurance to exercise', async function () {
+        const amtToExercise = await savedaiInstance.balanceOf(userWallet);
+        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+        
+        txReceipt = await savedaiInstance.exerciseInsurance(
+          amtToExercise, 
+          vaultArray, 
+          {from: userWallet}
+        );
+
+        // check that the right events were emitted
+        expectEvent(txReceipt, 'exerciseInsurance');
+      });
+      it('should revert if user does not have sufficient balance', async function () {
+        // use larger number for amtToExercise
+        let amtToExercise = await savedaiInstance.balanceOf(userWallet);
+        amtToExercise = amtToExercise.add(new BN(100));
+        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+        
+        await expectRevert(
+          savedaiInstance.exerciseInsurance(
+            amtToExercise, 
+            vaultArray, 
+            {from: userWallet}
+          ),
+          "Must have sufficient balance"
+        );
+      });
     });
-    it('should emit the amount of insurance to exercise', async function () {
-      // TODO
+    context('after expiry window', function () {
+      it('should revert', async function () {
+        const amtToExercise = await savedaiInstance.balanceOf(userWallet);
+        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+
+        await time.increase(26409094);
+
+        await expectRevert(
+          savedaiInstance.exerciseInsurance(
+            amtToExercise, 
+            vaultArray, 
+            {from: userWallet}
+          ),
+          "Can't exercise outside of the exercise window"
+        );
+      });
     });
   });
 

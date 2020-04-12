@@ -39,7 +39,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     EVENTS
     ***************/
     event Mint(uint256 _amount, address _recipient);
-    event ExerciseInsurance(uint256 _amount);
+    event ExerciseInsurance(uint256 _amount, uint256 deltaEth);
     event UpdateTokenName(string _oldName, string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
     event RemoveInsurance(uint256 _amount);
@@ -161,7 +161,6 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
      */
     function exerciseInsurance(uint256 _amount, address payable[] memory vaultsToExerciseFrom) public {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-        require(ocDai.isExerciseWindow(), "Must be in exercise window");
 
         // approve ocDai contract to spend both ocDai and cDai
         ocDai.approve(address(ocDaiAddress), LARGE_APPROVAL_NUMBER);
@@ -175,7 +174,8 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         uint256 deltaEth = balanceAfter.sub(balanceBefore);
         address(msg.sender).transfer(deltaEth);
         super._burn(msg.sender, _amount);
-        // TODO: emit ExerciseInsurance(_amount);
+
+        emit ExerciseInsurance(_amount, deltaEth);
     }
 
     /**
@@ -249,4 +249,6 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         // return number of cDAI tokens minted
         return updatedBalance.sub(initialBalance);
     }
+
+    function() external payable {}
 }
