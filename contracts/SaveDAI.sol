@@ -179,14 +179,12 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _amount The amount of saveDAI tokens to unbundle
     */
     function removeInsurance(uint256 _amount) public {
-        // Account for rounding issue
-        uint256 rounding =_amount.sub(balanceOf(msg.sender));
-        require(balanceOf(msg.sender) >= _amount.sub(rounding), "Must have sufficient balance");
+        // require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
         if (ocDai.hasExpired()) {
             cDai.transferFrom(address(this), msg.sender, _amount);
-            _burn(msg.sender, _amount.sub(rounding));
+            _burn(msg.sender, _amount);
         } else {
-
+        // TODO
         }
         emit RemoveInsurance(_amount);
     }
