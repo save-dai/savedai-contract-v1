@@ -73,7 +73,21 @@ contract('SaveDAI', function (accounts) {
   });
   describe('mint', async function () {
     it('should mint saveDAI tokens', async function () {
-      await helpers.mint(amount);
+      // Calculate how much DAI is needed to approve
+      const premium = await savedaiInstance.premiumToPay.call(amount);
+
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      exchangeRate = (exchangeRate.toString()) / 1e18;
+      let amountInDAI = amount * exchangeRate;
+      amountInDAI = new BN(amountInDAI.toString());
+
+      const totalTransfer = premium.add(amountInDAI);
+      largerAmount = totalTransfer.add(new BN(ether('0.1')));
+
+      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
+
+      // mint saveDAI tokens
+      await savedaiInstance.mint(amount, { from: userWallet });
 
       const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
       console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString());
@@ -90,6 +104,31 @@ contract('SaveDAI', function (accounts) {
       let underlying = await cDaiInstance.balanceOfUnderlying.call(savedaiAddress);
       underlying = underlying / 1e18;
       console.log('underlying balance of cDAI tokens', underlying.toString());
+    });
+    it('should use the delta in the balance of cDAI to mint the correct number of saveDAI tokens', async function () {
+      // get contract's initial cDAI balance
+      const initialcDaiBalance = await cDaiInstance.balanceOf(savedaiAddress);
+
+      // get user's initial saveDAI balance
+      const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+      // mint saveDAI tokens first time
+      await helpers.mint(amount, { from: userWallet });
+
+      // mint saveDAI tokens second time
+      await helpers.mint(amount, { from: userWallet });
+
+      // contract's final cDAI balance
+      const finalcDaiBalance = await cDaiInstance.balanceOf(savedaiAddress);
+
+      // get user's final saveDAI balance
+      const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+      // get contract's cDAI delta
+      const cDaidelta = finalcDaiBalance - initialcDaiBalance;
+      // get user's saveDAI delta
+      const saveDaiDelta = finalSaveDaiBalance - initialSaveDaiBalance;
+      // multiple amount by 2 to account for minting
+      assert.equal(cDaidelta, saveDaiDelta);
     });
     it('should decrease userWallet DAI balance', async function () {
       const initialBalance = await daiInstance.balanceOf(userWallet);
