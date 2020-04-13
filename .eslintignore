@@ -1,3 +1,4 @@
 **/test/abi/*.js
 **/migrations/*.js
 **/app/src/*.js
+**/node_modules

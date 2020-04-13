@@ -163,8 +163,8 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
 
         // approve ocDai contract to spend both ocDai and cDai
-        ocDai.approve(address(ocDaiAddress), LARGE_APPROVAL_NUMBER);
-        cDai.approve(address(ocDaiAddress), LARGE_APPROVAL_NUMBER);
+        ocDai.approve(address(ocDaiAddress), _amount);
+        cDai.approve(address(ocDaiAddress), _amount);
 
         uint256 balanceBefore = address(this).balance;
 

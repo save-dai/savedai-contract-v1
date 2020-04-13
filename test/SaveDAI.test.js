@@ -12,7 +12,6 @@ const {
   balance,
   expectRevert,
   expectEvent,
-  time,
 } = require('@openzeppelin/test-helpers');
 
 const SaveDAI = artifacts.require('SaveDAI');
@@ -281,8 +280,11 @@ contract('SaveDAI', function (accounts) {
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
         await time.increase(increaseTime);
       });
+    });
+  });
+
   describe('exerciseInsurance', function () {
-    beforeEach(async function() {
+    beforeEach(async function () {
       smallAmount = '4892167171';
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(smallAmount);
@@ -304,7 +306,7 @@ contract('SaveDAI', function (accounts) {
       it('should be able to call exercise', async function () {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
-  
+
         const initialocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
         const initialcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
 
@@ -313,11 +315,11 @@ contract('SaveDAI', function (accounts) {
         initialETH = await balance.current(userWallet);
 
         txReceipt = await savedaiInstance.exerciseInsurance(
-          amtToExercise, 
-          vaultArray, 
-          {from: userWallet}
+          amtToExercise,
+          vaultArray,
+          { from: userWallet },
         );
-        
+
         const tx = await web3.eth.getTransaction(txReceipt.tx);
         gasUsed = new BN(txReceipt.receipt.gasUsed);
         gasPrice = new BN(tx.gasPrice);
@@ -325,8 +327,8 @@ contract('SaveDAI', function (accounts) {
         const deltaEth = txReceipt.receipt.logs[5].args[1];
 
         const expectedEndETHBalance = initialETH
-        .sub(gasUsed.mul(gasPrice))
-        .add(deltaEth);
+          .sub(gasUsed.mul(gasPrice))
+          .add(deltaEth);
 
         // check that the user gets the right amount of ETH back
         finalETH = await balance.current(userWallet);
@@ -345,11 +347,11 @@ contract('SaveDAI', function (accounts) {
       it('should emit the amount of insurance to exercise', async function () {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
-        
+
         txReceipt = await savedaiInstance.exerciseInsurance(
-          amtToExercise, 
-          vaultArray, 
-          {from: userWallet}
+          amtToExercise,
+          vaultArray,
+          { from: userWallet },
         );
 
         // check that the right events were emitted
@@ -360,14 +362,14 @@ contract('SaveDAI', function (accounts) {
         let amtToExercise = await savedaiInstance.balanceOf(userWallet);
         amtToExercise = amtToExercise.add(new BN(100));
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
-        
+
         await expectRevert(
           savedaiInstance.exerciseInsurance(
-            amtToExercise, 
-            vaultArray, 
-            {from: userWallet}
+            amtToExercise,
+            vaultArray,
+            { from: userWallet },
           ),
-          "Must have sufficient balance"
+          'Must have sufficient balance',
         );
       });
     });
@@ -380,11 +382,11 @@ contract('SaveDAI', function (accounts) {
 
         await expectRevert(
           savedaiInstance.exerciseInsurance(
-            amtToExercise, 
-            vaultArray, 
-            {from: userWallet}
+            amtToExercise,
+            vaultArray,
+            { from: userWallet },
           ),
-          "Can't exercise outside of the exercise window"
+          'Can\'t exercise outside of the exercise window',
         );
       });
     });
@@ -419,4 +421,5 @@ contract('SaveDAI', function (accounts) {
       assert.strictEqual(newTokenName, 'newTokenName');
     });
   });
+
 });
