@@ -43,7 +43,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     event ExerciseInsurance(uint256 _amount, uint256 ETHReturned);
     event UpdateTokenName(string _oldName, string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
-    event RemoveInsurance(uint256 _amount);
+    event RemoveInsurance(address _user, uint256 _amount);
 
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
         public
@@ -191,6 +191,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         if (ocDai.hasExpired()) {
             cDai.transferFrom(address(this), msg.sender, balanceOf(msg.sender));
             _burn(msg.sender, balanceOf(msg.sender));
+            emit RemoveInsurance(msg.sender, balanceOf(msg.sender));
         } else {
             // require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
             // swap _amount of ocDAI on Uniswap for DAI and purchase cDAI
@@ -198,8 +199,8 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
             // transfer the sum of the newly minted cDAI with the original _amount
             cDai.transferFrom(address(this), msg.sender, cDaiPurchased.add(_amount));
             _burn(msg.sender, _amount);
+            emit RemoveInsurance(msg.sender, _amount);
         }
-        emit RemoveInsurance(_amount);
     }
 
     /*

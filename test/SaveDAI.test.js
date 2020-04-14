@@ -296,6 +296,9 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, initialSaveDaiBalance);
       });
+      it.only('should emit a RemoveInsurance event with the msg.sender\'s address and their _amount of insurance removed', async function () {
+
+      });
     });
 
     describe('exerciseInsurance', function () {
@@ -457,6 +460,9 @@ contract('SaveDAI', function (accounts) {
         const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
         assert.equal(finalSaveDaiBalance, 0);
+      });
+      it.only('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+
       });
     });
   });
