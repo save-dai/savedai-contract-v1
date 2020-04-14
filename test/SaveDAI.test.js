@@ -240,7 +240,40 @@ contract('SaveDAI', function (accounts) {
         await helpers.mint(amount);
       });
       it('should swap _amount of ocDAI on Uniswap for DAI', async function () {
+        // Idenitfy the contract's initial ocDAI balance
+        const initialocDAIBalance = await ocDaiInstance.balanceOf(savedaiAddress);
+        console.log('initialocDAIBalance', initialocDAIBalance.toString());
 
+        // Idenitfy the user's initial DAI balance
+        const initialDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+        console.log('initialDAIBalance', initialDAIBalance.toString());
+
+        // Idenitfy the user's saveDaiBalance
+        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+        console.log('initialSaveDaiBalance', initialSaveDaiBalance.toString());
+
+        // Idenitfy the user's initialcDaiBalance
+        const initialcDaiBalance = await cDaiInstance.balanceOf(userWallet);
+        console.log('initialcDaiBalance', initialcDaiBalance.toString());
+
+        // Remove userWallelt's insurance
+        await savedaiInstance.removeInsurance(initialocDAIBalance, { from: userWallet });
+
+        // Idenitfy the user's initial ocDAI balance
+        const finalocDAIBalance = await ocDaiInstance.balanceOf(savedaiAddress);
+        console.log('finalocDAIBalance', finalocDAIBalance.toString());
+
+        // Idenitfy the user's initial DAI balance
+        const finalDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+        console.log('finalDAIBalance', finalDAIBalance.toString());
+
+        // Idenitfy the user's finalSaveDaiBalance
+        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+        console.log('finalSaveDaiBalance', finalSaveDaiBalance.toString());
+
+        // Idenitfy the user's finalcDaiBalance
+        const finalcDaiBalance = await cDaiInstance.balanceOf(userWallet);
+        console.log('finalcDaiBalance', finalcDaiBalance.toString());
       });
       it('should deposit the new DAI into Compound for more cDAI', async function () {
 
@@ -249,7 +282,19 @@ contract('SaveDAI', function (accounts) {
 
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
+        // Idenitfy the user's initial saveDAI balance
+        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
+        // Remove userWallelt's insurance
+        await savedaiInstance.removeInsurance(initialSaveDaiBalance, { from: userWallet });
+
+        // Idenitfy the user's final saveDAI balance
+        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Calculate the difference in user's saveDAI tokens after removing insurance
+        const diff = initialSaveDaiBalance - finalSaveDaiBalance;
+
+        assert.equal(diff, initialSaveDaiBalance);
       });
     });
 
@@ -391,28 +436,27 @@ contract('SaveDAI', function (accounts) {
         // Idenitfy the user's cDAI balance after removing insurance
         const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
 
-        // Calcullate the difference in cDAI tokens after removing insurance
+        // Calculate the difference in cDAI tokens after removing insurance
         const diff = finalUserBalance - initialBalance;
         amount -= 1; // Subtract 1 to account for rounding issue
         assert.equal(diff, amount);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
-      });
-    });
+        await time.increase(increaseTime);
 
-    describe('exerciseInsurance', function () {
-      it('should revert', async function () {
-        const amtToExercise = await savedaiInstance.balanceOf(userWallet);
-        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+        // Idenitfy the user's initial saveDAI balance
+        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
-        await expectRevert(
-          savedaiInstance.exerciseInsurance(
-            amtToExercise,
-            vaultArray,
-            { from: userWallet },
-          ),
-          'Can\'t exercise outside of the exercise window',
-        );
+        // Remove userWallelt's insurance
+        await savedaiInstance.removeInsurance(initialSaveDaiBalance, { from: userWallet });
+
+        // Idenitfy the user's finanl saveDAI balance
+        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Calculate the difference in user's saveDAI tokens after removing insurance
+        const diff = initialSaveDaiBalance - finalSaveDaiBalance;
+
+        assert.equal(diff, initialSaveDaiBalance);
       });
     });
   });

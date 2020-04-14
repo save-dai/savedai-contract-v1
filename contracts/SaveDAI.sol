@@ -28,6 +28,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
 
     UniswapFactoryInterface public uniswapFactory;
     UniswapExchangeInterface public daiUniswapExchange;
+    UniswapExchangeInterface public ocDaiExchange;
     CTokenInterface public cDai;
     OTokenInterface public ocDai;
     IERC20 public dai;
@@ -52,6 +53,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         dai = IERC20(daiAddress);
         uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
         daiUniswapExchange = _getExchange(daiAddress);
+        ocDaiExchange = _getExchange(ocDaiAddress);
     }
 
     /**
@@ -132,8 +134,6 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _ocDaiTokensToBuy The number of ocDAI to buy
     */
     function premiumToPay(uint256 _ocDaiTokensToBuy) public view returns (uint256) {
-        UniswapExchangeInterface ocDaiExchange = _getExchange(ocDaiAddress);
-
         // get the amount of ETH that needs to be paid for _ocDaiTokensToBuy.
         uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
             _ocDaiTokensToBuy
@@ -193,7 +193,10 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
             cDai.transferFrom(address(this), msg.sender, _amount);
             _burn(msg.sender, _amount);
         } else {
-        // TODO
+            // swap _amount of ocDAI on Uniswap for DAI and purchase cDAI
+            uint256 cDaiPurchased = _uniswapSwapOCDAI(_amount);
+            cDai.transferFrom(address(this), msg.sender, cDaiPurchased);
+            _burn(msg.sender, _amount);
         }
         emit RemoveInsurance(_amount);
     }
@@ -227,9 +230,28 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     }
 
     /**
+    * @notice This function exchanges ocDAI tokens for DAI on uniswap
+    * and then deposits the DAI into Compound for more cDAI
+    * @param _premium The amount in ocDAI tokens to exchange
+    */
+    function _uniswapSwapOCDAI (uint256 _premium) internal returns (uint256) {
+        // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
+        ocDai.approve(address(ocDaiExchange), LARGE_APPROVAL_NUMBER);
+
+        uint256 daiAmount = ocDaiExchange.tokenToTokenSwapInput (
+            _premium, // tokens sold
+            1, // min_tokens_bought
+            1, // min eth bought
+            LARGE_BLOCK_SIZE, // deadline
+            address(dai) // token address
+        );
+
+        return _mintcDAI(daiAmount);
+    }
+
+    /**
     * @notice This function instantiates an interface for a given exchange's address
     * @param _tokenAddress The token's address
-    * @return Returns the exchange interface nterface
     */
     function _getExchange(address _tokenAddress) internal view returns (UniswapExchangeInterface) {
         UniswapExchangeInterface exchange = UniswapExchangeInterface(
