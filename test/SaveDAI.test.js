@@ -5,6 +5,7 @@ const web3 = new Web3(web3Provider);
 const helpers = require('./helpers/helpers.js');
 
 const { expect } = require('chai');
+
 const {
   BN,
   ether,
@@ -296,8 +297,21 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, initialSaveDaiBalance);
       });
-      it.only('should emit a RemoveInsurance event with the msg.sender\'s address and their _amount of insurance removed', async function () {
+      it('should emit a RemoveInsurance event with the msg.sender\'s address and their _amount of insurance removed', async function () {
+        const transaction = await savedaiInstance.removeInsurance(0, { from: userWallet });
 
+        // assert RemoveInsurance fires
+        const event = await transaction.logs[1].event;
+        assert.equal(event, 'RemoveInsurance');
+
+        // assert msg.sender's address emits in the event
+        const userAddress = await transaction.logs[1].args._user;
+        assert.equal(userAddress.toLowerCase(), userWallet);
+
+        // assert the correct amount of ocDAI (insurance) was removed
+        const insuranceRemovedAmount = await transaction.logs[1].args._amount;
+        amount -= 1; // account for rounding issue
+        assert.equal(insuranceRemovedAmount.toString(), amount);
       });
     });
 
@@ -445,7 +459,8 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, saveDaiBalance);
       });
-      it.only('should burn all of msg.sender\'s remaining saveDAI tokens', async function () {
+      it('should burn all of msg.sender\'s remaining saveDAI tokens', async function () {
+        // Increase time so ocDAI has expired
         await time.increase(increaseTime);
 
         // Idenitfy the user's initial saveDAI balance
@@ -461,8 +476,26 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(finalSaveDaiBalance, 0);
       });
-      it.only('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+      it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+        // Increase time so ocDAI has expired
+        await time.increase(increaseTime);
 
+        const initialBalance = await savedaiInstance.balanceOf(userWallet);
+
+        const transaction = await savedaiInstance.removeInsurance(0, { from: userWallet });
+
+        // assert RemoveInsurance fires
+        const event = await transaction.logs[1].event;
+        assert.equal(event, 'RemoveInsurance');
+
+        // assert msg.sender's address emits in the event
+        const userAddress = await transaction.logs[1].args._user;
+        assert.equal(userAddress.toLowerCase(), userWallet);
+
+        // assert the correct amount of ocDAI (insurance) was removed
+        const insuranceRemovedAmount = await transaction.logs[1].args._amount;
+
+        assert.equal(insuranceRemovedAmount.toString(), initialBalance.toString());
       });
     });
   });
