@@ -250,23 +250,35 @@ contract('SaveDAI', function (accounts) {
         // Idenitfy the user's final DAI balance
         const finalDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
 
-        // User's DAI balance should remain the same given the ocDAI swapped for DAI is spend on more cDAI 
+        // User's DAI balance should remain the same given the ocDAI swapped for DAI is spent on more cDAI
         assert.equal(initialDAIBalance.toString(), finalDAIBalance.toString());
       });
-      it.only('should deposit the new DAI into Compound for more cDAI', async function () {
+      it.only('should deposit new DAI into Compound for more cDAI and transfer the total amount of cDAI', async function () {
+        // Calculate how much DAI is needed to approve
+        const premium = await savedaiInstance.premiumToPay.call(amount);
+
+        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+        exchangeRate = (exchangeRate.toString()) / 1e18;
+        let amountInDAI = amount * exchangeRate;
+        amountInDAI = new BN(amountInDAI.toString());
+
+        const totalTransfer = premium.add(amountInDAI);
+        largerAmount = totalTransfer.add(new BN(ether('0.1')));
+
+        await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
+
+        // mint saveDAI tokens
+        await savedaiInstance.mint(amount, { from: userWallet });
+
         // Idenitfy the user's initialcDaiBalance
-        /*
         const initialcDaiBalance = await cDaiInstance.balanceOf(userWallet);
         console.log('initialcDaiBalance', initialcDaiBalance.toString());
 
         // Remove userWallelt's insurance
         await savedaiInstance.removeInsurance(initialSaveDaiBalance, { from: userWallet });
 
-        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
-        exchangeRate = (exchangeRate.toString()) / 1e18;
-
-        const amountOfNewcDAI = exchangeRate * initialSaveDaiBalance;
-        console.log('amountOfcDAI', amountOfNewcDAI.toString());
+        const amountOfnewcDAI = (premium / exchangeRate);
+        console.log('amountOfnewcDAI', amountOfnewcDAI);
 
         // Idenitfy the user's finalcDaiBalance
         const finalcDaiBalance = await cDaiInstance.balanceOf(userWallet);
@@ -275,47 +287,14 @@ contract('SaveDAI', function (accounts) {
         const diff = finalcDaiBalance - initialcDaiBalance;
         console.log('diff', diff.toString());
 
-        //assert.equal();
-        */
-        /***********************************************/
+        // amount equals 489921671716
+        const totalcDaiTransfered = amountOfnewcDAI + 489921671716;
+        console.log('totalcDaiTransfered', totalcDaiTransfered.toString());
 
-        // Idenitfy the contract's initial ocDAI balance
-        const initialocDAIBalance = await ocDaiInstance.balanceOf(savedaiAddress);
-        console.log('initialocDAIBalance', initialocDAIBalance.toString());
+        const delta = totalcDaiTransfered - diff; 
+        console.log('delta', delta.toString());
 
-        // Idenitfy the user's initial DAI balance
-        const initialDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-        console.log('initialDAIBalance', initialDAIBalance.toString());
-
-        // Idenitfy the user's saveDaiBalance
-        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-        console.log('initialSaveDaiBalance', initialSaveDaiBalance.toString());
-
-        // Idenitfy the user's initialcDaiBalance
-        const initialcDaiBalance = await cDaiInstance.balanceOf(userWallet);
-        console.log('initialcDaiBalance', initialcDaiBalance.toString());
-
-        // Remove userWallelt's insurance
-        await savedaiInstance.removeInsurance(initialocDAIBalance, { from: userWallet });
-
-        // Idenitfy the user's initial ocDAI balance
-        const finalocDAIBalance = await ocDaiInstance.balanceOf(savedaiAddress);
-        console.log('finalocDAIBalance', finalocDAIBalance.toString());
-
-        // Idenitfy the user's final DAI balance
-        const finalDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-        console.log('finalDAIBalance', finalDAIBalance.toString());
-
-        // Idenitfy the user's finalSaveDaiBalance
-        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-        console.log('finalSaveDaiBalance', finalSaveDaiBalance.toString());
-
-        // Idenitfy the user's finalcDaiBalance
-        const finalcDaiBalance = await cDaiInstance.balanceOf(userWallet);
-        console.log('finalcDaiBalance', finalcDaiBalance.toString());
-      });
-      it('should transfer the total amount of cDAI to msg.sender', async function () {
-
+        //assert.equal(diff, totalcDaiTransfered);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
         // Remove userWallelt's insurance
