@@ -184,7 +184,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     }
 
     /**
-    * @notice This function will remove insurance
+    * @notice This function will unbundle your saveDAI and transfer ocDAI and cDAI to msg.sender
     * @param _amount The amount of saveDAI tokens to unbundle
     */
     function removeInsurance(uint256 _amount) public {
@@ -201,6 +201,22 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
             emit RemoveInsurance(msg.sender, _amount);
             _burn(msg.sender, _amount);
         }
+    }
+
+    /**
+    * @notice This function will remove insurance and exchange your saveDAI for cDAI
+    * @param _amount The amount of saveDAI tokens to unbundle
+    */
+    function removeAndSellInsuranceForcDAI(uint256 _amount) public {
+        
+    }
+
+    /**
+    * @notice This function will remove insurance and exchange your saveDAI for DAI
+    * @param _amount The amount of saveDAI tokens to unbundle
+    */
+    function removeAndSellInsuranceForDAI(uint256 _amount) public {
+
     }
 
     /*

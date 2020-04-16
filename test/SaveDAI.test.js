@@ -125,7 +125,7 @@ contract('SaveDAI', function (accounts) {
       const cDaidelta = finalcDaiBalance - initialcDaiBalance;
       // get user's saveDAI delta
       const saveDaiDelta = finalSaveDaiBalance - initialSaveDaiBalance;
-      // multiple amount by 2 to account for minting
+
       assert.equal(cDaidelta, saveDaiDelta);
     });
     it('should decrease userWallet DAI balance', async function () {
@@ -254,10 +254,13 @@ contract('SaveDAI', function (accounts) {
         assert.equal(initialDAIBalance.toString(), finalDAIBalance.toString());
       });
       it.only('should deposit new DAI into Compound for more cDAI and transfer the total amount of cDAI', async function () {
+        // setting amount as a uint
+        amount = 489921671716;
+
         // Calculate how much DAI is needed to approve
         const premium = await savedaiInstance.premiumToPay.call(amount);
 
-        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+        let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
         exchangeRate = (exchangeRate.toString()) / 1e18;
         let amountInDAI = amount * exchangeRate;
         amountInDAI = new BN(amountInDAI.toString());
@@ -275,7 +278,9 @@ contract('SaveDAI', function (accounts) {
         console.log('initialcDaiBalance', initialcDaiBalance.toString());
 
         // Remove userWallelt's insurance
-        await savedaiInstance.removeInsurance(initialSaveDaiBalance, { from: userWallet });
+        await savedaiInstance.removeInsurance(amount, { from: userWallet });
+
+        // GIVE THOUGHT TO USING _getCostOfcDAI IN _mintcDAI AND CAPTURING ExchangeRate EVENT
 
         const amountOfnewcDAI = (premium / exchangeRate);
         console.log('amountOfnewcDAI', amountOfnewcDAI);
@@ -287,14 +292,18 @@ contract('SaveDAI', function (accounts) {
         const diff = finalcDaiBalance - initialcDaiBalance;
         console.log('diff', diff.toString());
 
-        // amount equals 489921671716
-        const totalcDaiTransfered = amountOfnewcDAI + 489921671716;
+        const totalcDaiTransfered = amountOfnewcDAI + amount;
         console.log('totalcDaiTransfered', totalcDaiTransfered.toString());
 
-        const delta = totalcDaiTransfered - diff; 
+        //assert.equal(diff, totalcDaiTransfered);
+
+        const delta = totalcDaiTransfered - diff;
         console.log('delta', delta.toString());
 
-        //assert.equal(diff, totalcDaiTransfered);
+        const deltaInDai = (delta * exchangeRate) / 1e18;
+        console.log('deltaInDai', deltaInDai.toString());
+
+        //assert.approximately(deltaInDai, 1, 0.5, 'numbers are close');
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
         // Remove userWallelt's insurance
@@ -500,7 +509,35 @@ contract('SaveDAI', function (accounts) {
     });
   });
 
+  describe('removeAndSellInsuranceForcDAI', function () {
+    it('should revert if ocDAI has expired', async function () {
 
+    });
+    it('should swap _amount of ocDAI for DAI on uniswap', async function () {
+
+    });
+    it('should deposit the new DAI into Compound for newcDAI', async function () {
+
+    });
+    it('should deposit new DAI into Compound for more cDAI and transfer the total amount of cDAI', async function () {
+
+    });
+    it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+
+    });
+  });
+
+  describe('removeAndSellInsuranceForDAI', function () {
+    it('should revert if ocDAI has expired', async function () {
+
+    });
+    it('should swap _amount of ocDAI for DAI on uniswap', async function () {
+
+    });
+    it('should send msg.sender the newly minted DAI', async function () {
+
+    });
+  });
 
   describe('updateTokenName', function () {
     it('should revert if not called by the owner', async function () {
