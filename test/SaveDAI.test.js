@@ -34,9 +34,6 @@ contract('SaveDAI', function (accounts) {
   owner = accounts[0];
   notOwner = accounts[1];
 
-  // Number of seconds to increase to ensure February 21st, 2021 has elapsed
-  increaseTime = 26409094;
-
   beforeEach(async function () {
     savedai = await SaveDAI.new();
     savedaiAddress = savedai.address;
@@ -233,15 +230,15 @@ contract('SaveDAI', function (accounts) {
     });
   });
 
-  describe('removeInsurance', function () {
-    it.skip('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-      await expectRevert(savedaiInstance.removeInsurance(amount), 'Must have sufficient balance');
-    });
-    beforeEach(async function () {
-      // Mint SaveDAI tokens
-      await helpers.mint(amount);
-    });
-    context('when ocDAI has NOT expired', function () {
+  context('when ocDAI has not expired', function () {
+    describe('removeInsurance', function () {
+      it.skip('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+        await expectRevert(savedaiInstance.removeInsurance(amount), 'Must have sufficient balance');
+      });
+      beforeEach(async function () {
+        // Mint SaveDAI tokens
+        await helpers.mint(amount);
+      });
       it('should swap _amount of ocDAI on Uniswap for DAI', async function () {
 
       });
@@ -255,54 +252,26 @@ contract('SaveDAI', function (accounts) {
 
       });
     });
-    context('when ocDAI has expired', function () {
-      it('should transfer _amount of cDAI to msg.sender', async function () {
-        // Increase time so ocDAI has expired
-        await time.increase(increaseTime);
 
-        // Idenitfy the user's initial cDAI balance
-        const initialBalance = await cDaiInstance.balanceOf(userWallet);
+    describe('exerciseInsurance', function () {
+      beforeEach(async function () {
+        smallAmount = '4892167171';
+        // Calculate how much DAI is needed to approve
+        const premium = await savedaiInstance.premiumToPay.call(smallAmount);
 
-        // Idenitfy the user's saveDaiBalance
-        const saveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+        exchangeRate = (exchangeRate.toString()) / 1e18;
+        let amountInDAI = smallAmount * exchangeRate;
+        amountInDAI= new BN(amountInDAI.toString());
 
-        // Remove userWallelt's insurance
-        await savedaiInstance.removeInsurance(saveDaiBalance, { from: userWallet });
+        const totalTransfer = premium.add(amountInDAI);
+        largerAmount = totalTransfer.add(new BN(ether('0.1')));
 
-        // Idenitfy the user's cDAI balance after removing insurance
-        const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
+        await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
 
-        // Calcullate the difference in cDAI tokens after removing insurance
-        const diff = finalUserBalance - initialBalance;
-        amount -= 1; // Subtract 1 to account for rounding issue
-        assert.equal(diff, amount);
+        // mint saveDAI tokens
+        await savedaiInstance.mint(smallAmount, { from: userWallet });
       });
-      it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
-        await time.increase(increaseTime);
-      });
-    });
-  });
-
-  describe('exerciseInsurance', function () {
-    beforeEach(async function () {
-      smallAmount = '4892167171';
-      // Calculate how much DAI is needed to approve
-      const premium = await savedaiInstance.premiumToPay.call(smallAmount);
-
-      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
-      exchangeRate = (exchangeRate.toString()) / 1e18;
-      let amountInDAI = smallAmount * exchangeRate;
-      amountInDAI= new BN(amountInDAI.toString());
-
-      const totalTransfer = premium.add(amountInDAI);
-      largerAmount = totalTransfer.add(new BN(ether('0.1')));
-
-      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
-
-      // mint saveDAI tokens
-      await savedaiInstance.mint(smallAmount, { from: userWallet });
-    });
-    context('during expiry window', function () {
       it('should be able to call exercise', async function () {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
@@ -373,12 +342,57 @@ contract('SaveDAI', function (accounts) {
         );
       });
     });
-    context('after expiry window', function () {
+  });
+
+  context('when ocDAI has expired', function () {
+    beforeEach(async function () {
+      smallAmount = '4892167171';
+      // Calculate how much DAI is needed to approve
+      const premium = await savedaiInstance.premiumToPay.call(smallAmount);
+
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      exchangeRate = (exchangeRate.toString()) / 1e18;
+      let amountInDAI = smallAmount * exchangeRate;
+      amountInDAI= new BN(amountInDAI.toString());
+
+      const totalTransfer = premium.add(amountInDAI);
+      largerAmount = totalTransfer.add(new BN(ether('0.1')));
+
+      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
+
+      // mint saveDAI tokens
+      await savedaiInstance.mint(smallAmount, { from: userWallet });
+    });
+    describe('removeInsurance', function () {
+      it('should transfer _amount of cDAI to msg.sender', async function () {
+        // Increase time so ocDAI has expired
+        await time.increaseTo(1614292785);
+
+        // Idenitfy the user's initial cDAI balance
+        const initialBalance = await cDaiInstance.balanceOf(userWallet);
+
+        // Idenitfy the user's saveDaiBalance
+        const saveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Remove userWallelt's insurance
+        await savedaiInstance.removeInsurance(saveDaiBalance, { from: userWallet });
+
+        // Idenitfy the user's cDAI balance after removing insurance
+        const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
+
+        // Calcullate the difference in cDAI tokens after removing insurance
+        const diff = finalUserBalance - initialBalance;
+        smallAmount -= 1; // Subtract 1 to account for rounding issue
+        assert.equal(diff, smallAmount);
+      });
+      it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
+      });
+    });
+
+    describe('exerciseInsurance', function () {
       it('should revert', async function () {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
-
-        await time.increase(26409094);
 
         await expectRevert(
           savedaiInstance.exerciseInsurance(
@@ -391,6 +405,8 @@ contract('SaveDAI', function (accounts) {
       });
     });
   });
+
+
 
   describe('updateTokenName', function () {
     it('should revert if not called by the owner', async function () {
