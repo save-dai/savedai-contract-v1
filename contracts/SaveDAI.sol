@@ -189,17 +189,22 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     */
     function removeInsurance(uint256 _amount) public {
         _amount -= 1; // account for Compound rounding issue
+        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
+
         if (ocDai.hasExpired()) {
-            cDai.transferFrom(address(this), msg.sender, balanceOf(msg.sender));
-            emit RemoveInsurance(msg.sender, balanceOf(msg.sender));
-            _burn(msg.sender, balanceOf(msg.sender));
-        } else {
-            // require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-            // swap _amount of ocDAI on Uniswap for DAI and purchase cDAI
-            uint256 cDaiPurchased = _uniswapSwapOCDAI(_amount);
-            // transfer the sum of the newly minted cDAI with the original _amount
-            cDai.transferFrom(address(this), msg.sender, cDaiPurchased.add(_amount));
+            // transfer _amount of cDAI to msg.sender
+            cDai.transferFrom(address(this), msg.sender, _amount);
             emit RemoveInsurance(msg.sender, _amount);
+            // burn _amount of saveDAI tokens
+            _burn(msg.sender, _amount);
+        } else {
+            // transfer _amount of cDAI to msg.sender
+            cDai.transferFrom(address(this), msg.sender, _amount);
+            ocDai.approve(address(this), _amount);
+            // transfer _amount of ocDAI to msg.sender
+            ocDai.transferFrom(address(this), msg.sender, _amount);
+            emit RemoveInsurance(msg.sender, _amount);
+            // burn _amount of saveDAI tokens
             _burn(msg.sender, _amount);
         }
     }
@@ -225,7 +230,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @param _amount The amount of saveDAI tokens to unbundle
     */
     function removeAndSellInsuranceForDAI(uint256 _amount) public {
-
+        //TODO
     }
 
     /*

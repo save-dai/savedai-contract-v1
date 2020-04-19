@@ -233,35 +233,70 @@ contract('SaveDAI', function (accounts) {
 
   context('when ocDAI has not expired', function () {
     describe('removeInsurance', function () {
-      it.skip('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.removeInsurance(amount), 'Must have sufficient balance');
-      });
       beforeEach(async function () {
         // Mint SaveDAI tokens
         await helpers.mint(amount);
       });
-      it('should swap _amount on Uniswap for DAI', async function () {
-        // Idenitfy the user's initial DAI balance
-        const initialDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-
-        // Remove userWallelt's insurance
-        await savedaiInstance.removeInsurance(initialSaveDaiBalance, { from: userWallet });
-
-        // Idenitfy the user's final DAI balance
-        const finalDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-
-        // User's DAI balance should remain the same given the ocDAI swapped for DAI is spent on more cDAI
-        assert.equal(initialDAIBalance.toString(), finalDAIBalance.toString());
+      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+        await expectRevert(savedaiInstance.removeInsurance(amount + 1), 'Must have sufficient balance');
       });
       it('should transfer _amount of ocDAI to msg.sender', async function () {
-        // TODO
+        // Idenitfy the user's initial ocDAI balance
+        const initialBalance = await ocDaiInstance.balanceOf(userWallet);
+
+        // Remove userWallelt's insurance
+        // unbundle saveDAI and send user back _amount of ocDAI
+        await savedaiInstance.removeInsurance(amount, { from: userWallet });
+
+        // Idenitfy the user's ocDAI balance after receiving ocDAI
+        const finalUserBalance = await ocDaiInstance.balanceOf(userWallet);
+
+        // Calculate the difference in ocDAI tokens
+        const diff = finalUserBalance - initialBalance;
+
+        amount -= 1; // account for rounding issue
+        assert.equal(diff, amount);
       });
       it('should transfer _amount of cDAI to msg.sender', async function () {
-        // TODO
+        // Idenitfy the user's initial cDAI balance
+        const initialBalance = await cDaiInstance.balanceOf(userWallet);
+
+        // Remove userWallelt's insurance
+        // unbundle saveDAI and send user back _amount of cDAI
+        await savedaiInstance.removeInsurance(amount, { from: userWallet });
+
+        // Idenitfy the user's cDAI balance after receiving cDAI
+        const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
+
+        // Calculate the difference in cDAI tokens
+        const diff = finalUserBalance - initialBalance;
+
+        amount -= 1; // account for rounding issue
+        assert.equal(diff, amount);
+      });
+      it('should emit a RemoveInsurance event with the msg.sender\'s address and their _amount of insurance removed', async function () {
+        // Remove _amount of userWallelt's insurance
+        const transaction = await savedaiInstance.removeInsurance(amount, { from: userWallet });
+
+        // assert RemoveInsurance fires
+        const event = await transaction.logs[4].event;
+        assert.equal(event, 'RemoveInsurance');
+
+        // assert msg.sender's address emits in the event
+        const userAddress = await transaction.logs[4].args._user;
+        assert.equal(userAddress.toLowerCase(), userWallet);
+
+        // assert the correct amount of ocDAI insurance coverage was removed
+        const insuranceRemovedAmount = await transaction.logs[4].args._amount;
+        amount -= 1; // account for rounding issue
+        assert.equal(insuranceRemovedAmount.toString(), amount);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
-        // Remove userWallelt's insurance
-        await savedaiInstance.removeInsurance(initialSaveDaiBalance, { from: userWallet });
+        // Idenitfy the user's initial saveDAI balance
+        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Remove _amount of userWallelt's insurance
+        await savedaiInstance.removeInsurance(amount, { from: userWallet });
 
         // Idenitfy the user's final saveDAI balance
         const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
@@ -270,23 +305,6 @@ contract('SaveDAI', function (accounts) {
         const diff = initialSaveDaiBalance - finalSaveDaiBalance;
 
         assert.equal(diff, initialSaveDaiBalance);
-      });
-      it('should emit a RemoveInsurance event with the msg.sender\'s address and their _amount of insurance removed', async function () {
-        const transaction = await savedaiInstance.removeInsurance(initialSaveDaiBalance, { from: userWallet });
-
-        // assert RemoveInsurance fires
-        const event = await transaction.logs[9].event;
-
-        assert.equal(event, 'RemoveInsurance');
-
-        // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[9].args._user;
-        assert.equal(userAddress.toLowerCase(), userWallet);
-
-        // assert the correct amount of ocDAI (insurance) was removed
-        const insuranceRemovedAmount = await transaction.logs[9].args._amount;
-        amount -= 1; // account for rounding issue
-        assert.equal(insuranceRemovedAmount.toString(), amount);
       });
     });
 
@@ -408,11 +426,15 @@ contract('SaveDAI', function (accounts) {
   });
 
   context('when ocDAI has expired', function () {
-    beforeEach(async function () {
-      await helpers.mint(amount);
-    });
     describe('removeInsurance', function () {
+      beforeEach(async function () {
+        await helpers.mint(amount);
+      });
+      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+        await expectRevert(savedaiInstance.removeInsurance(amount + 1), 'Must have sufficient balance');
+      });
       it('should transfer _amount of cDAI to msg.sender', async function () {
+        // TODO Organize tests that accelerate time
         // Increase time so ocDAI has expired
         await time.increaseTo(1614292785);
 
@@ -420,31 +442,22 @@ contract('SaveDAI', function (accounts) {
         const initialBalance = await cDaiInstance.balanceOf(userWallet);
 
         // Remove userWallelt's insurance
-        // if ocDAI has expired, unbundle saveDAI and send user back all of their cDAI
-        await savedaiInstance.removeInsurance(0, { from: userWallet });
+        // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
+        await savedaiInstance.removeInsurance(amount, { from: userWallet });
 
-        // Idenitfy the user's cDAI balance after removing insurance
+        // Idenitfy the user's cDAI balance after receiving cDAI
         const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
 
-        // Calculate the difference in cDAI tokens after removing insurance
+        // Calculate the difference in cDAI tokens
         const diff = finalUserBalance - initialBalance;
 
-        assert.equal(diff, initialSaveDaiBalance);
+        amount -= 1; // account for rounding issue
+        assert.equal(diff, amount);
       });
-      it('should burn all of msg.sender\'s remaining saveDAI tokens', async function () {
-        assert.notEqual(initialSaveDaiBalance, 0);
-
+      it('should emit a RemoveInsurance event with the msg.sender\'s address and the amount of insurance removed', async function () {
         // Remove userWallelt's insurance
-        // if ocDAI has expired, unbundle saveDAI and send user back all of their cDAI
-        await savedaiInstance.removeInsurance(0, { from: userWallet });
-
-        // Idenitfy the user's finanl saveDAI balance
-        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-
-        assert.equal(finalSaveDaiBalance, 0);
-      });
-      it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
-        const transaction = await savedaiInstance.removeInsurance(0, { from: userWallet });
+        // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
+        const transaction = await savedaiInstance.removeInsurance(amount, { from: userWallet });
 
         // assert RemoveInsurance fires
         const event = await transaction.logs[1].event;
@@ -454,25 +467,43 @@ contract('SaveDAI', function (accounts) {
         const userAddress = await transaction.logs[1].args._user;
         assert.equal(userAddress.toLowerCase(), userWallet);
 
-        // assert the correct amount of ocDAI (insurance) was removed
+        // assert the correct amount of ocDAI token coverage was removed
         const insuranceRemovedAmount = await transaction.logs[1].args._amount;
 
-        assert.equal(insuranceRemovedAmount.toString(), initialSaveDaiBalance.toString());
+        amount -= 1; // account for rounding issue
+        assert.equal(insuranceRemovedAmount.toString(), amount.toString());
+      });
+      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
+        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Remove userWallelt's insurance
+        // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
+        await savedaiInstance.removeInsurance(amount, { from: userWallet });
+
+        // Idenitfy the user's finanl saveDAI balance
+        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Calculate the difference in saveDAI tokens
+        const diff = finalSaveDaiBalance - initialSaveDaiBalance;
+
+        amount -= 1; // account for rounding issue
+        assert.equal(finalSaveDaiBalance, 0);
       });
     });
   });
 
-  describe.only('removeAndSellInsuranceForcDAI', function () {
+  // TODO Organize tests that accelerate time
+  describe.skip('removeAndSellInsuranceForcDAI', function () {
     beforeEach(async function () {
       // Mint SaveDAI tokens
       await helpers.mint(amount);
     });
-    it.skip('should revert if ocDAI has expired', async function () {
+    it('should revert if ocDAI has expired', async function () {
       // Increase time so ocDAI has expired
       await time.increase(increaseTime);
       await expectRevert(savedaiInstance.removeAndSellInsuranceForcDAI(amount), 'ocDAI must not have expired');
     });
-    it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+    it.skip('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
       await expectRevert(savedaiInstance.removeAndSellInsuranceForcDAI(amount + 1, { from: userWallet }), 'Must have sufficient balance');
     });
     it('should swap _amount of ocDAI for DAI on uniswap', async function () {
