@@ -503,7 +503,7 @@ contract('SaveDAI', function (accounts) {
       await time.increase(increaseTime);
       await expectRevert(savedaiInstance.removeAndSellInsuranceForcDAI(amount), 'ocDAI must not have expired');
     });
-    it.skip('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+    it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
       await expectRevert(savedaiInstance.removeAndSellInsuranceForcDAI(amount + 1, { from: userWallet }), 'Must have sufficient balance');
     });
     it('should swap _amount of ocDAI for DAI on uniswap', async function () {

@@ -45,6 +45,15 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     event ExchangeRate(uint256 _exchangeRateCurrent);
     event RemoveInsurance(address _user, uint256 _amount);
 
+    /***************
+    MODIFIERS
+    ***************/
+    modifier sufficientBalance(uint256 _amount) {
+        _amount -= 1; // account for Compound rounding issue
+        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
+        _;
+    }
+
     constructor() ERC20Detailed("SaveDAI", "SD", 8)
         public
     {
@@ -187,10 +196,8 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @notice This function will unbundle your saveDAI and transfer ocDAI and cDAI to msg.sender
     * @param _amount The amount of saveDAI tokens to unbundle
     */
-    function removeInsurance(uint256 _amount) public {
+    function removeInsurance(uint256 _amount) public sufficientBalance(_amount) {
         _amount -= 1; // account for Compound rounding issue
-        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-
         if (ocDai.hasExpired()) {
             // transfer _amount of cDAI to msg.sender
             cDai.transferFrom(address(this), msg.sender, _amount);
@@ -213,10 +220,9 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @notice This function will remove insurance and exchange your saveDAI for cDAI
     * @param _amount The amount of saveDAI tokens to unbundle
     */
-    function removeAndSellInsuranceForcDAI(uint256 _amount) public {
-        _amount -= 1; // account for Compound rounding issue
+    function removeAndSellInsuranceForcDAI(uint256 _amount) public sufficientBalance(_amount) {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
-        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
+        _amount -= 1; // account for Compound rounding issue
         // swap _amount of ocDAI on Uniswap for DAI and purchase cDAI
         uint256 cDaiPurchased = _uniswapSwapOCDAI(_amount);
         // transfer the sum of the newly minted cDAI with the original _amount
