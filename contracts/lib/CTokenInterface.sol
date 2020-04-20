@@ -9,5 +9,5 @@ interface CTokenInterface {
     function balanceOf(address account) external view returns (uint256);
     function balanceOfUnderlying(address owner) external returns (uint);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    function accrueInterest() external returns (uint);
+    function redeem(uint redeemTokens) external returns (uint);
 }

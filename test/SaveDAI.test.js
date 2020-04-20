@@ -587,16 +587,49 @@ contract('SaveDAI', function (accounts) {
       amount -= 1; // account for rounding issue
       assert.equal(insuranceRemovedAmount.toString(), amount);
     });
+    it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
+      const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+      // Remove userWallelt's insurance
+      // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
+      await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
+
+      // Idenitfy the user's finanl saveDAI balance
+      const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+      // Calculate the difference in saveDAI tokens
+      const diff = finalSaveDaiBalance - initialSaveDaiBalance;
+
+      amount -= 1; // account for rounding issue
+      assert.equal(finalSaveDaiBalance, 0);
+    });
   });
 
+  // TODO Organize tests that accelerate time
   describe('removeAndSellInsuranceForDAI', function () {
-    it('should revert if ocDAI has expired', async function () {
-
+    beforeEach(async function () {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
     });
-    it('should swap _amount of ocDAI for DAI on uniswap', async function () {
-
+    it.skip('should revert if ocDAI has expired', async function () {
+      // Increase time so ocDAI has expired
+      await time.increase(increaseTime);
+      await expectRevert(savedaiInstance.removeAndSellInsuranceForDAI(amount), 'ocDAI must not have expired');
+    });
+    it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+      await expectRevert(savedaiInstance.removeAndSellInsuranceForDAI(amount + 1, { from: userWallet }), 'Must have sufficient balance');
+    });
+    it.only('should swap _amount of ocDAI for DAI on uniswap', async function () {
+      daiAmount = await savedaiInstance.removeAndSellInsuranceForDAI.call(amount, { from: userWallet }) / 1e18;
+      console.log(daiAmount.toString());
     });
     it('should send msg.sender the newly minted DAI', async function () {
+
+    });
+    it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+
+    });
+    it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
 
     });
   });
