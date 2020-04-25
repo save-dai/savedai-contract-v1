@@ -39,7 +39,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     EVENTS
     ***************/
     event Mint(uint256 _amount, address _recipient);
-    event ExerciseInsurance(uint256 _amount, uint256 deltaEth);
+    event ExerciseInsurance(uint256 _amount, uint256 ETHReturned);
     event UpdateTokenName(string _oldName, string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
     event RemoveInsurance(uint256 _amount);
@@ -159,23 +159,28 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
      * @param _amount the number of saveDAI tokens
      * @param vaultsToExerciseFrom the array of vaults to exercise from.
      */
-    function exerciseInsurance(uint256 _amount, address payable[] memory vaultsToExerciseFrom) public {
+    function exerciseInsurance(
+        uint256 _amount,
+        address payable[] memory vaultsToExerciseFrom)
+        public
+    {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
 
         // approve ocDai contract to spend both ocDai and cDai
         ocDai.approve(address(ocDaiAddress), _amount);
         cDai.approve(address(ocDaiAddress), _amount);
 
-        uint256 balanceBefore = address(this).balance;
+        address payable saveDai = address(this);
+        uint256 balanceBefore = saveDai.balance;
 
         ocDai.exercise(_amount, vaultsToExerciseFrom);
 
-        uint256 balanceAfter = address(this).balance;
-        uint256 deltaEth = balanceAfter.sub(balanceBefore);
-        address(msg.sender).transfer(deltaEth);
+        uint256 balanceAfter = saveDai.balance;
+        uint256 ETHReturned = balanceAfter.sub(balanceBefore);
+        address(msg.sender).transfer(ETHReturned);
         super._burn(msg.sender, _amount);
 
-        emit ExerciseInsurance(_amount, deltaEth);
+        emit ExerciseInsurance(_amount, ETHReturned);
     }
 
     /**

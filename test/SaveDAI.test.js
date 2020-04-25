@@ -30,7 +30,7 @@ const userWallet = '0x274d9e726844ab52e351e8f1272e7fc3f58b7e5f';
 
 contract('SaveDAI', function (accounts) {
   // amount of ocDAI, cDAI, saveDAI we want to mint
-  amount = '489921671716';
+  amount = '4892167171';
   owner = accounts[0];
   notOwner = accounts[1];
 
@@ -255,22 +255,7 @@ contract('SaveDAI', function (accounts) {
 
     describe('exerciseInsurance', function () {
       beforeEach(async function () {
-        smallAmount = '4892167171';
-        // Calculate how much DAI is needed to approve
-        const premium = await savedaiInstance.premiumToPay.call(smallAmount);
-
-        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
-        exchangeRate = (exchangeRate.toString()) / 1e18;
-        let amountInDAI = smallAmount * exchangeRate;
-        amountInDAI= new BN(amountInDAI.toString());
-
-        const totalTransfer = premium.add(amountInDAI);
-        largerAmount = totalTransfer.add(new BN(ether('0.1')));
-
-        await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
-
-        // mint saveDAI tokens
-        await savedaiInstance.mint(smallAmount, { from: userWallet });
+        await helpers.mint(amount);
       });
       it('should be able to call exercise using one vault', async function () {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
@@ -387,22 +372,7 @@ contract('SaveDAI', function (accounts) {
 
   context('when ocDAI has expired', function () {
     beforeEach(async function () {
-      smallAmount = '4892167171';
-      // Calculate how much DAI is needed to approve
-      const premium = await savedaiInstance.premiumToPay.call(smallAmount);
-
-      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
-      exchangeRate = (exchangeRate.toString()) / 1e18;
-      let amountInDAI = smallAmount * exchangeRate;
-      amountInDAI= new BN(amountInDAI.toString());
-
-      const totalTransfer = premium.add(amountInDAI);
-      largerAmount = totalTransfer.add(new BN(ether('0.1')));
-
-      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
-
-      // mint saveDAI tokens
-      await savedaiInstance.mint(smallAmount, { from: userWallet });
+      await helpers.mint(amount);
     });
     describe('removeInsurance', function () {
       it('should transfer _amount of cDAI to msg.sender', async function () {
@@ -423,8 +393,8 @@ contract('SaveDAI', function (accounts) {
 
         // Calcullate the difference in cDAI tokens after removing insurance
         const diff = finalUserBalance - initialBalance;
-        smallAmount -= 1; // Subtract 1 to account for rounding issue
-        assert.equal(diff, smallAmount);
+        amount -= 1; // Subtract 1 to account for rounding issue
+        assert.equal(diff, amount);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
       });
