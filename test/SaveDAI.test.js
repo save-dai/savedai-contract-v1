@@ -35,6 +35,9 @@ contract('SaveDAI', function (accounts) {
   owner = accounts[0];
   notOwner = accounts[1];
 
+  // Number of seconds to increase to ensure February 21st, 2021 has elapsed
+  increaseTime = 26409094;
+
   beforeEach(async function () {
     savedai = await SaveDAI.new();
     savedaiAddress = savedai.address;
@@ -221,11 +224,11 @@ contract('SaveDAI', function (accounts) {
   });
 
   context('when ocDAI has NOT expired', function () {
+    beforeEach(async function () {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
+    });
     describe('removeInsurance', function () {
-      beforeEach(async function () {
-        // Mint SaveDAI tokens
-        await helpers.mint(amount);
-      });
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
         await expectRevert(savedaiInstance.removeInsurance(amount + 1), 'Must have sufficient balance');
       });
@@ -298,10 +301,171 @@ contract('SaveDAI', function (accounts) {
       });
     });
 
-    describe('exerciseInsurance', function () {
-      beforeEach(async function () {
-        await helpers.mint(amount);
+    describe('removeAndSellInsuranceForcDAI', function () {
+      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+        await expectRevert(savedaiInstance.removeAndSellInsuranceForcDAI(amount + 1, { from: userWallet }), 'Must have sufficient balance');
       });
+      it('should swap _amount of ocDAI for DAI on uniswap', async function () {
+        // Idenitfy the user's initial DAI balance
+        const initialDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+
+        // Remove userWallelt's insurance
+        await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
+
+        // Idenitfy the user's final DAI balance
+        const finalDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+
+        // User's DAI balance should remain the same given the ocDAI swapped for DAI is spent on more cDAI
+        assert.equal(initialDAIBalance.toString(), finalDAIBalance.toString());
+      });
+      it.skip('should deposit new DAI into Compound for more cDAI and transfer the total amount of cDAI', async function () {
+        // amount of ocDAI, cDAI, saveDAI we want to mint
+        amount -= 1; // account for rounding issue
+
+        // Calculate how much DAI is needed to approve
+        const premium = await savedaiInstance.premiumToPay.call(amount);
+
+        let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
+        exchangeRate = (exchangeRate.toString()) / 1e18;
+        let amountInDAI = amount * exchangeRate;
+        amountInDAI = new BN(amountInDAI.toString());
+
+        const totalTransfer = premium.add(amountInDAI);
+        largerAmount = totalTransfer.add(new BN(ether('0.1')));
+
+        await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
+
+        // mint saveDAI tokens
+        await savedaiInstance.mint(amount, { from: userWallet });
+
+        // Idenitfy the user's initialcDaiBalance
+        const initialcDaiBalance = await cDaiInstance.balanceOf(userWallet);
+        console.log('initialcDaiBalance', initialcDaiBalance.toString());
+
+        // Remove userWallelt's insurance
+        await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
+
+        const amountOfnewcDAI = (premium / exchangeRate);
+        console.log('amountOfnewcDAI', amountOfnewcDAI);
+
+        // Idenitfy the user's finalcDaiBalance
+        const finalcDaiBalance = await cDaiInstance.balanceOf(userWallet);
+        console.log('finalcDaiBalance', finalcDaiBalance.toString());
+
+        const diff = finalcDaiBalance - initialcDaiBalance;
+        console.log('diff', diff.toString());
+
+        const totalcDaiTransfered = amountOfnewcDAI + amount;
+        console.log('totalcDaiTransfered', totalcDaiTransfered.toString());
+
+        const deltaInCdaiTransferred = totalcDaiTransfered - diff;
+        console.log('deltaInCdaiTransferred', deltaInCdaiTransferred.toString());
+
+        const deltaInDai = (deltaInCdaiTransferred * exchangeRate) / 1e18;
+        console.log('deltaInDai', deltaInDai.toString());
+
+        const diffInDai = (diff * exchangeRate) / 1e18;
+        console.log('diffInDai', diffInDai.toString());
+
+        // NOTE: Give though to using _getCostOfcDAI in _mintcDAI
+        // and capture ExchangeRate event for more precise test
+
+        // The difference in cDAI in value is less than 0.04 DAI given exchange rate variability
+        assert.approximately(deltaInDai, diffInDai, 0.039);
+      });
+      it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+        const transaction = await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
+
+        // assert RemoveInsurance fires
+        const event = await transaction.logs[9].event;
+        assert.equal(event, 'RemoveInsurance');
+
+        // assert msg.sender's address emits in the event
+        const userAddress = await transaction.logs[9].args._user;
+        assert.equal(userAddress.toLowerCase(), userWallet);
+
+        // assert the correct amount of ocDAI (insurance) was removed
+        const insuranceRemovedAmount = await transaction.logs[9].args._amount;
+        amount -= 1; // account for rounding issue
+        assert.equal(insuranceRemovedAmount.toString(), amount);
+      });
+      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
+        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Remove userWallelt's insurance
+        // unbundle saveDAI and send user back _amount of cDAI plus newly minted cDAI
+        await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
+
+        // Idenitfy the user's finanl saveDAI balance
+        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Calculate the difference in saveDAI tokens
+        const diff = initialSaveDaiBalance - finalSaveDaiBalance;
+
+        amount -= 1; // account for rounding issue
+        assert.equal(diff, amount);
+      });
+    });
+
+    describe('removeAndSellInsuranceForDAI', function () {
+      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
+        await expectRevert(savedaiInstance.removeAndSellInsuranceForDAI(amount + 1, { from: userWallet }), 'Must have sufficient balance');
+      });
+      it.skip('should send msg.sender the newly minted DAI', async function () {
+        // Idenitfy the user's initialDaiBalance
+        const initialDaiBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+        console.log('initialDaiBalance', initialDaiBalance.toString());
+
+        amount -= 1; // account for rounding issue
+
+        //Returns the value in DAI for a given amount of saveDAI
+        const saveDaiPrice = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount) / 1e18;
+
+        // Remove userWallelt's insurance
+        await savedaiInstance.removeAndSellInsuranceForDAI(amount, { from: userWallet });
+
+        // Idenitfy the user's updatedDaiBalance
+        const updatedDaiBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+
+        const diff = updatedDaiBalance - initialDaiBalance;
+
+        assert.approximately(saveDaiPrice, diff, .099);
+      });
+      it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+        const transaction = await savedaiInstance.removeAndSellInsuranceForDAI(amount, { from: userWallet });
+
+        // assert RemoveInsurance fires
+        const event = await transaction.logs[8].event;
+        assert.equal(event, 'RemoveInsurance');
+
+        // assert msg.sender's address emits in the event
+        const userAddress = await transaction.logs[8].args._user;
+        assert.equal(userAddress.toLowerCase(), userWallet);
+
+        // assert the correct amount of ocDAI (insurance) was removed
+        const insuranceRemovedAmount = await transaction.logs[8].args._amount;
+        amount -= 1; // account for rounding issue
+        assert.equal(insuranceRemovedAmount.toString(), amount);
+      });
+      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
+        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Remove userWallelt's insurance
+        // unbundle saveDAI and send user back DAI
+        await savedaiInstance.removeAndSellInsuranceForDAI(amount, { from: userWallet });
+
+        // Idenitfy the user's finanl saveDAI balance
+        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
+
+        // Calculate the difference in saveDAI tokens
+        const diff = initialSaveDaiBalance - finalSaveDaiBalance;
+
+        amount -= 1; // account for rounding issue
+        assert.equal(diff, amount);
+      });
+    });
+
+    describe('exerciseInsurance', function () {
       it('should be able to call exercise using one vault', async function () {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
@@ -413,186 +577,14 @@ contract('SaveDAI', function (accounts) {
         );
       });
     });
-
-    describe('removeAndSellInsuranceForcDAI', function () {
-      beforeEach(async function () {
-        // Mint SaveDAI tokens
-        await helpers.mint(amount);
-      });
-      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.removeAndSellInsuranceForcDAI(amount + 1, { from: userWallet }), 'Must have sufficient balance');
-      });
-      it('should swap _amount of ocDAI for DAI on uniswap', async function () {
-        // Idenitfy the user's initial DAI balance
-        const initialDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-
-        // Remove userWallelt's insurance
-        await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
-
-        // Idenitfy the user's final DAI balance
-        const finalDAIBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-
-        // User's DAI balance should remain the same given the ocDAI swapped for DAI is spent on more cDAI
-        assert.equal(initialDAIBalance.toString(), finalDAIBalance.toString());
-      });
-      it.skip('should deposit new DAI into Compound for more cDAI and transfer the total amount of cDAI', async function () {
-        // amount of ocDAI, cDAI, saveDAI we want to mint
-        amount -= 1; // account for rounding issue
-
-        // Calculate how much DAI is needed to approve
-        const premium = await savedaiInstance.premiumToPay.call(amount);
-
-        let exchangeRate = await cDaiInstance.exchangeRateCurrent.call();
-        exchangeRate = (exchangeRate.toString()) / 1e18;
-        let amountInDAI = amount * exchangeRate;
-        amountInDAI = new BN(amountInDAI.toString());
-
-        const totalTransfer = premium.add(amountInDAI);
-        largerAmount = totalTransfer.add(new BN(ether('0.1')));
-
-        await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
-
-        // mint saveDAI tokens
-        await savedaiInstance.mint(amount, { from: userWallet });
-
-        // Idenitfy the user's initialcDaiBalance
-        const initialcDaiBalance = await cDaiInstance.balanceOf(userWallet);
-        console.log('initialcDaiBalance', initialcDaiBalance.toString());
-
-        // Remove userWallelt's insurance
-        await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
-
-        const amountOfnewcDAI = (premium / exchangeRate);
-        console.log('amountOfnewcDAI', amountOfnewcDAI);
-
-        // Idenitfy the user's finalcDaiBalance
-        const finalcDaiBalance = await cDaiInstance.balanceOf(userWallet);
-        console.log('finalcDaiBalance', finalcDaiBalance.toString());
-
-        const diff = finalcDaiBalance - initialcDaiBalance;
-        console.log('diff', diff.toString());
-
-        const totalcDaiTransfered = amountOfnewcDAI + amount;
-        console.log('totalcDaiTransfered', totalcDaiTransfered.toString());
-
-        const deltaInCdaiTransferred = totalcDaiTransfered - diff;
-        console.log('deltaInCdaiTransferred', deltaInCdaiTransferred.toString());
-
-        const deltaInDai = (deltaInCdaiTransferred * exchangeRate) / 1e18;
-        console.log('deltaInDai', deltaInDai.toString());
-
-        const diffInDai = (diff * exchangeRate) / 1e18;
-        console.log('diffInDai', diffInDai.toString());
-
-        // NOTE: Give though to using _getCostOfcDAI in _mintcDAI
-        // and capture ExchangeRate event for more precise test
-
-        // The difference in cDAI in value is less than 0.04 DAI given exchange rate variability
-        assert.approximately(deltaInDai, diffInDai, 0.039);
-      });
-      it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
-        const transaction = await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
-
-        // assert RemoveInsurance fires
-        const event = await transaction.logs[9].event;
-        assert.equal(event, 'RemoveInsurance');
-
-        // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[9].args._user;
-        assert.equal(userAddress.toLowerCase(), userWallet);
-
-        // assert the correct amount of ocDAI (insurance) was removed
-        const insuranceRemovedAmount = await transaction.logs[9].args._amount;
-        amount -= 1; // account for rounding issue
-        assert.equal(insuranceRemovedAmount.toString(), amount);
-      });
-      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
-        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-
-        // Remove userWallelt's insurance
-        // unbundle saveDAI and send user back _amount of cDAI plus newly minted cDAI
-        await savedaiInstance.removeAndSellInsuranceForcDAI(amount, { from: userWallet });
-
-        // Idenitfy the user's finanl saveDAI balance
-        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-
-        // Calculate the difference in saveDAI tokens
-        const diff = initialSaveDaiBalance - finalSaveDaiBalance;
-
-        amount -= 1; // account for rounding issue
-        assert.equal(diff, amount);
-      });
-    });
-
-    describe('removeAndSellInsuranceForDAI', function () {
-      beforeEach(async function () {
-        // Mint SaveDAI tokens
-        await helpers.mint(amount);
-      });
-      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.removeAndSellInsuranceForDAI(amount + 1, { from: userWallet }), 'Must have sufficient balance');
-      });
-      it.skip('should send msg.sender the newly minted DAI', async function () {
-        // Idenitfy the user's initialDaiBalance
-        const initialDaiBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-        console.log('initialDaiBalance', initialDaiBalance.toString());
-
-        amount -= 1; // account for rounding issue
-
-        //Returns the value in DAI for a given amount of saveDAI
-        const saveDaiPrice = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount) / 1e18;
-
-        // Remove userWallelt's insurance
-        await savedaiInstance.removeAndSellInsuranceForDAI(amount, { from: userWallet });
-
-        // Idenitfy the user's updatedDaiBalance
-        const updatedDaiBalance = await daiInstance.balanceOf(userWallet) / 1e18;
-
-        const diff = updatedDaiBalance - initialDaiBalance;
-
-        assert.approximately(saveDaiPrice, diff, .099);
-      });
-      it('should emit a RemoveInsurance event with the msg.sender\'s address and their total balance of insurance removed', async function () {
-        const transaction = await savedaiInstance.removeAndSellInsuranceForDAI(amount, { from: userWallet });
-
-        // assert RemoveInsurance fires
-        const event = await transaction.logs[8].event;
-        assert.equal(event, 'RemoveInsurance');
-
-        // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[8].args._user;
-        assert.equal(userAddress.toLowerCase(), userWallet);
-
-        // assert the correct amount of ocDAI (insurance) was removed
-        const insuranceRemovedAmount = await transaction.logs[8].args._amount;
-        amount -= 1; // account for rounding issue
-        assert.equal(insuranceRemovedAmount.toString(), amount);
-      });
-      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
-        const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-
-        // Remove userWallelt's insurance
-        // unbundle saveDAI and send user back DAI
-        await savedaiInstance.removeAndSellInsuranceForDAI(amount, { from: userWallet });
-
-        // Idenitfy the user's finanl saveDAI balance
-        const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-
-        // Calculate the difference in saveDAI tokens
-        const diff = initialSaveDaiBalance - finalSaveDaiBalance;
-
-        amount -= 1; // account for rounding issue
-        assert.equal(diff, amount);
-      });
-    });
   });
 
   context('when ocDAI has expired', function () {
+    beforeEach(async function () {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
+    });
     describe('removeInsurance', function () {
-      beforeEach(async function () {
-        // Mint SaveDAI tokens
-        await helpers.mint(amount);
-      });
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
         await expectRevert(savedaiInstance.removeInsurance(amount + 1), 'Must have sufficient balance');
       });
@@ -666,6 +658,22 @@ contract('SaveDAI', function (accounts) {
         // Mint SaveDAI tokens
         await helpers.mint(amount);
         await expectRevert(savedaiInstance.removeAndSellInsuranceForDAI(amount, { from: userWallet }), 'ocDAI must not have expired');
+      });
+    });
+
+    describe('exerciseInsurance', function () {
+      it('should revert', async function () {
+        const amtToExercise = await savedaiInstance.balanceOf(userWallet);
+        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+
+        await expectRevert(
+          savedaiInstance.exerciseInsurance(
+            amtToExercise,
+            vaultArray,
+            { from: userWallet },
+          ),
+          'Can\'t exercise outside of the exercise window',
+        );
       });
     });
   });
