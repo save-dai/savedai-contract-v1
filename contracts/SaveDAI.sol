@@ -137,31 +137,6 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     }
 
     /**
-    * @notice This function calculates the premiums to be paid if a buyer wants to
-    * buy ocDAI on Uniswap
-    * @param _ocDaiTokensToBuy The number of ocDAI to buy
-    */
-    function premiumToPay(uint256 _ocDaiTokensToBuy) public view returns (uint256) {
-        // get the amount of ETH that needs to be paid for _ocDaiTokensToBuy.
-        uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
-            _ocDaiTokensToBuy
-        );
-
-        // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
-        return daiUniswapExchange.getTokenToEthOutputPrice(ethToPay);
-    }
-
-    /**
-    * @notice Returns the value in DAI for a given amount of saveDAI provided
-    * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
-    * @return The value in DAI
-    */
-    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
-        uint256 ocDaiCost = premiumToPay(_saveDaiAmount);
-        return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
-    }
-
-    /**
      * @notice Called by anyone holding saveDAI tokens who wants to excercise the underlying
      * ocDAI insurance. The caller transfers their saveDAI tokens and get paid out in ETH.
      * @param _amount the number of saveDAI tokens
@@ -226,10 +201,14 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         sufficientBalance(_amount)
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
-        // swap _amount of ocDAI on Uniswap for DAI and purchase cDAI
-        uint256 cDaiPurchased = _uniswapSwapOCDAI(_amount);
+        // swap _amount of ocDAI on Uniswap for DAI
+        uint256 DAItokens = _uniswapBuyDAI(_amount);
+
+        // mint cDAI
+        uint256 cDAItokens = _mintcDAI(DAItokens);
+
         // transfer the sum of the newly minted cDAI with the original _amount
-        cDai.transferFrom(address(this), msg.sender, cDaiPurchased.add(_amount));
+        cDai.transferFrom(address(this), msg.sender, cDAItokens.add(_amount));
         emit RemoveInsurance(msg.sender, _amount);
         _burn(msg.sender, _amount);
     }
@@ -276,6 +255,31 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         _burn(msg.sender, _amount);
     }
 
+    /**
+    * @notice This function calculates the premiums to be paid if a buyer wants to
+    * buy ocDAI on Uniswap
+    * @param _ocDaiTokensToBuy The number of ocDAI to buy
+    */
+    function premiumToPay(uint256 _ocDaiTokensToBuy) public view returns (uint256) {
+        // get the amount of ETH that needs to be paid for _ocDaiTokensToBuy.
+        uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
+            _ocDaiTokensToBuy
+        );
+
+        // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
+        return daiUniswapExchange.getTokenToEthOutputPrice(ethToPay);
+    }
+
+    /**
+    * @notice Returns the value in DAI for a given amount of saveDAI provided
+    * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
+    * @return The value in DAI
+    */
+    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
+        uint256 ocDaiCost = premiumToPay(_saveDaiAmount);
+        return _getCostOfcDAI(_saveDaiAmount).add(ocDaiCost);
+    }
+
     /*
     * Internal functions
     */
@@ -304,23 +308,20 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     }
 
     /**
-    * @notice This function exchanges ocDAI tokens for DAI on uniswap
-    * and then deposits the DAI into Compound for more cDAI
-    * @param _premium The amount in ocDAI tokens to exchange
+    * @notice This function buys DAI on uniswap
+    * @param _ocDaiTokens The amount in ocDAI tokens to exchange
     */
-    function _uniswapSwapOCDAI (uint256 _premium) internal returns (uint256) {
+    function _uniswapBuyDAI (uint256 _ocDaiTokens) internal returns (uint256) {
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
-        ocDai.approve(address(ocDaiExchange), _premium);
+        ocDai.approve(address(ocDaiExchange), _ocDaiTokens);
 
-        uint256 daiAmount = ocDaiExchange.tokenToTokenSwapInput (
-            _premium, // tokens sold
+        return ocDaiExchange.tokenToTokenSwapInput (
+            _ocDaiTokens, // tokens sold
             1, // min_tokens_bought
             1, // min eth bought
             LARGE_BLOCK_SIZE, // deadline
             address(dai) // token address
         );
-
-        return _mintcDAI(daiAmount);
     }
 
     /**
