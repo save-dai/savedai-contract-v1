@@ -227,18 +227,20 @@ contract('SaveDAI', function (accounts) {
     beforeEach(async function () {
       // Mint SaveDAI tokens
       await helpers.mint(amount);
+      saveDai = await savedaiInstance.balanceOf(userWallet);
+      saveDai.toNumber();
     });
     describe('removeInsurance', function () {
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.removeInsurance(amount + 1), 'Must have sufficient balance');
+        await expectRevert(savedaiInstance.removeInsurance(saveDai + 1), 'Must have sufficient balance');
       });
       it('should transfer _amount of ocDAI to msg.sender', async function () {
         // Idenitfy the user's initial ocDAI balance
         const initialBalance = await ocDaiInstance.balanceOf(userWallet);
 
-        // Remove userWallelt's insurance
+        // Remove userWallet's insurance
         // unbundle saveDAI and send user back _amount of ocDAI
-        await savedaiInstance.removeInsurance(amount, { from: userWallet });
+        await savedaiInstance.removeInsurance(saveDai, { from: userWallet });
 
         // Idenitfy the user's ocDAI balance after receiving ocDAI
         const finalUserBalance = await ocDaiInstance.balanceOf(userWallet);
@@ -246,8 +248,7 @@ contract('SaveDAI', function (accounts) {
         // Calculate the difference in ocDAI tokens
         const diff = finalUserBalance - initialBalance;
 
-        amount -= 1; // account for rounding issue
-        assert.equal(diff, amount);
+        assert.equal(diff, saveDai);
       });
       it('should transfer _amount of cDAI to msg.sender', async function () {
         // Idenitfy the user's initial cDAI balance
@@ -255,7 +256,7 @@ contract('SaveDAI', function (accounts) {
 
         // Remove userWallelt's insurance
         // unbundle saveDAI and send user back _amount of cDAI
-        await savedaiInstance.removeInsurance(amount, { from: userWallet });
+        await savedaiInstance.removeInsurance(saveDai, { from: userWallet });
 
         // Idenitfy the user's cDAI balance after receiving cDAI
         const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
@@ -263,12 +264,11 @@ contract('SaveDAI', function (accounts) {
         // Calculate the difference in cDAI tokens
         const diff = finalUserBalance - initialBalance;
 
-        amount -= 1; // account for rounding issue
-        assert.equal(diff, amount);
+        assert.equal(diff, saveDai);
       });
       it('should emit a RemoveInsurance event with the msg.sender\'s address and their _amount of insurance removed', async function () {
         // Remove _amount of userWallelt's insurance
-        const transaction = await savedaiInstance.removeInsurance(amount, { from: userWallet });
+        const transaction = await savedaiInstance.removeInsurance(saveDai, { from: userWallet });
 
         // assert RemoveInsurance fires
         const event = await transaction.logs[4].event;
@@ -280,15 +280,14 @@ contract('SaveDAI', function (accounts) {
 
         // assert the correct amount of ocDAI insurance coverage was removed
         const insuranceRemovedAmount = await transaction.logs[4].args._amount;
-        amount -= 1; // account for rounding issue
-        assert.equal(insuranceRemovedAmount.toString(), amount);
+        assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
         // Idenitfy the user's initial saveDAI balance
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
         // Remove _amount of userWallelt's insurance
-        await savedaiInstance.removeInsurance(amount, { from: userWallet });
+        await savedaiInstance.removeInsurance(saveDai, { from: userWallet });
 
         // Idenitfy the user's final saveDAI balance
         const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
@@ -296,8 +295,7 @@ contract('SaveDAI', function (accounts) {
         // Calculate the difference in user's saveDAI tokens after removing insurance
         const diff = initialSaveDaiBalance - finalSaveDaiBalance;
 
-        amount -= 1; // account for rounding issue
-        assert.equal(diff, amount);
+        assert.equal(diff, saveDai);
       });
     });
 
