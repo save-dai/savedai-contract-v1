@@ -202,10 +202,10 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
         // swap _amount of ocDAI on Uniswap for DAI
-        uint256 DAItokens = _uniswapBuyDAI(_amount);
+        uint256 daiTokens = _uniswapBuyDAI(_amount);
 
         // mint cDAI
-        uint256 cDAItokens = _mintcDAI(DAItokens);
+        uint256 cDAItokens = _mintcDAI(daiTokens);
 
         // transfer the sum of the newly minted cDAI with the original _amount
         cDai.transferFrom(address(this), msg.sender, cDAItokens.add(_amount));
@@ -232,24 +232,18 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
         // identify saveDAI contract's updated DAI balance
         uint256 updatedDAIBalance = dai.balanceOf(address(this));
 
-        uint256 daiForcDAI = updatedDAIBalance.sub(initiaDAIBalance);
+        uint256 daiRedeemed = updatedDAIBalance.sub(initiaDAIBalance);
 
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
         ocDai.approve(address(ocDaiExchange), _amount);
 
-        uint256 daiForOcDai = ocDaiExchange.tokenToTokenSwapInput (
-            _amount, // tokens sold
-            1, // min_tokens_bought
-            1, // min eth bought
-            LARGE_BLOCK_SIZE, // deadline
-            address(dai) // token address
-        );
+        uint256 daiTokens = _uniswapBuyDAI(_amount);
 
         // saveDAI gives DAI contract allowance to transfer DAI tokens
-        dai.approve(address(this), daiForcDAI.add(daiForOcDai));
+        dai.approve(address(this), daiTokens.add(daiRedeemed));
 
         //transfer DAI to msg.sender
-        dai.transferFrom(address(this), msg.sender, daiForcDAI.add(daiForOcDai));
+        dai.transferFrom(address(this), msg.sender, daiTokens.add(daiRedeemed));
 
         emit RemoveInsurance(msg.sender, _amount);
         _burn(msg.sender, _amount);

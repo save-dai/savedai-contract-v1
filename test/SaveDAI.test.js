@@ -428,9 +428,31 @@ contract('SaveDAI', function (accounts) {
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
         await expectRevert(savedaiInstance.removeAndSellInsuranceForDAI(saveDai + 1, { from: userWallet }), 'Must have sufficient balance');
       });
+      it('should decrease saveDAI contract by cDAI and ocDAI', async function () {
+        // Identify initial balances
+        const initialcDaiBalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
+        const initialocDaiBalanceContract = await ocDaiInstance.balanceOf(savedaiAddress);
+
+        // Remove userWallet's insurance
+        await savedaiInstance.removeAndSellInsuranceForcDAI(saveDai, { from: userWallet });
+
+        // Identify final balances
+        const finalcDAIbalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
+        const finalocDaiBalanceContract = await ocDaiInstance.balanceOf(savedaiAddress);
+
+        diffIncDai = initialcDaiBalanceContract.sub(finalcDAIbalanceContract);
+        diffInocDai = initialocDaiBalanceContract.sub(finalocDaiBalanceContract);
+
+        // difference in cDai and ocDai in contract should be the same as saveDAI exchanged
+        assert.equal(diffIncDai.toString(), saveDai);
+        assert.equal(diffInocDai.toString(), saveDai);
+      });
       it.skip('should send msg.sender the newly minted DAI', async function () {
         // Idenitfy the user's initialDaiBalance
-        const initialDaiBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+        let initialDaiBalance = await daiInstance.balanceOf(userWallet) / 1e18;
+        console.log('initialDaiBalance', initialDaiBalance.toString());
+
+        initialDaiBalance = await daiInstance.balanceOf(userWallet);
         console.log('initialDaiBalance', initialDaiBalance.toString());
 
         //Returns the value in DAI for a given amount of saveDAI
