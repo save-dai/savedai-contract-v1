@@ -335,7 +335,7 @@ contract('SaveDAI', function (accounts) {
         // console.log('diffInContract', diffInContract.toString())
         // console.log('diffInUser', diffInUser.toString())
 
-        assert.equal(diffInContract.toString(), diffInUser.toString());
+        assert.approximately(diffInContract.toNumber(), diffInUser.toNumber(), 2);
       });
       it.skip('should deposit new DAI into Compound for more cDAI and transfer the total amount of cDAI', async function () {
 

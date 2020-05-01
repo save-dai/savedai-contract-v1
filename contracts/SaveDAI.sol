@@ -290,7 +290,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     */
     function _uniswapBuyOCDAI(uint256 _premium) internal returns (uint256) {
         // saveDAI gives uniswap exchange allowance to transfer DAI tokens
-        dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER);
+        dai.approve(address(daiUniswapExchange), _premium);
 
         return daiUniswapExchange.tokenToTokenSwapInput (
                 _premium, // tokens sold
@@ -305,7 +305,7 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @notice This function buys DAI on uniswap
     * @param _ocDaiTokens The amount in ocDAI tokens to exchange
     */
-    function _uniswapBuyDAI (uint256 _ocDaiTokens) internal returns (uint256) {
+    function _uniswapBuyDAI(uint256 _ocDaiTokens) internal returns (uint256) {
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
         ocDai.approve(address(ocDaiExchange), _ocDaiTokens);
 
