@@ -71,6 +71,11 @@ contract('SaveDAI', function (accounts) {
     expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
   describe('mint', async function () {
+    it('should revert if paused', async function () {
+      await savedaiInstance.pause({ from: owner });
+      // mint saveDAI tokens
+      await expectRevert(helpers.mint(amount, { from: userWallet }), 'Pausable: paused');
+    });
     it('should mint saveDAI tokens', async function () {
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.premiumToPay.call(amount);

@@ -4,6 +4,7 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./lib/UniswapExchangeInterface.sol";
@@ -11,7 +12,7 @@ import "./lib/UniswapFactoryInterface.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 
-contract SaveDAI is ERC20, ERC20Detailed, Ownable {
+contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     using SafeMath for uint256;
 
     /***************
@@ -99,7 +100,11 @@ contract SaveDAI is ERC20, ERC20Detailed, Ownable {
     * @notice This function mints saveDAI tokens
     * @param _amount The number of saveDAI to mint
     */
-    function mint(uint256 _amount) external returns (bool) {
+    function mint(uint256 _amount) 
+        external 
+        whenNotPaused 
+        returns (bool) 
+    {
         // calculate DAI needed to mint _amount of cDAI and mint tokens
         uint256 amountInDAI = _getCostOfcDAI(_amount);
 
