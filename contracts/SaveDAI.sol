@@ -18,6 +18,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     /***************
     GLOBAL CONSTANTS
     ***************/
+    // Variable to set distant deadline for Uniswap tokenToTokenSwap transactions
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
     uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
 
@@ -41,7 +42,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     EVENTS
     ***************/
     event Mint(uint256 _amount, address _recipient);
-    event ExerciseInsurance(uint256 _amount, uint256 EthReturned);
+    event ExerciseInsurance(uint256 _amount, uint256 _EthReturned, address _user);
     event UpdateTokenName(string _oldName, string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
     event WithdrawForCDaiAndOCDai(address _user, uint256 _amount);
@@ -101,11 +102,12 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     /**
     * @notice This function mints saveDAI tokens
     * @param _desiredAmount The desired number of saveDAI to mint
+    * @return The number of saveDAI tokens minted
     */
     function mint(uint256 _desiredAmount) 
         external 
         whenNotPaused 
-        returns (bool) 
+        returns (uint256) 
     {
         // calculate DAI needed to mint _desiredAmount of cDAI and mint tokens
         uint256 cDaiCost = _getCostOfCDAI(_desiredAmount);
@@ -140,7 +142,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         uint256 amount = ocDaiAmount;
         emit Mint(amount, msg.sender);
 
-        return true;
+        return amount;
     }
 
     /**
@@ -170,7 +172,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         address(msg.sender).transfer(EthReturned);
         super._burn(msg.sender, _amount);
 
-        emit ExerciseInsurance(_amount, EthReturned);
+        emit ExerciseInsurance(_amount, EthReturned, msg.sender);
     }
 
     /**

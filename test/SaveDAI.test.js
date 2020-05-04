@@ -170,6 +170,25 @@ contract('SaveDAI', function (accounts) {
       const { logs } = await savedaiInstance.mint(amount, { from: userWallet });
       expectEvent.inLogs(logs, 'Mint');
     });
+    it('should return the number of saveDAI tokens minted', async function () {
+      // Calculate how much DAI is needed to approve
+      const premium = await savedaiInstance.getCostOfOCDai.call(amount);
+
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      exchangeRate = (exchangeRate.toString()) / 1e18;
+      let amountInDAI = amount * exchangeRate;
+      amountInDAI = new BN(amountInDAI.toString());
+
+      const totalTransfer = premium.add(amountInDAI);
+      largerAmount = totalTransfer.add(new BN(ether('0.1')));
+
+      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
+
+      // mint saveDAI tokens
+      const saveDaiTokens = await savedaiInstance.mint.call(amount, { from: userWallet });
+
+      assert.equal(saveDaiTokens, amount -=1);
+    });
   });
   describe('getCostOfOCDai', function () {
     it('should return premium to pay for ocDAI tokens', async function () {
@@ -421,7 +440,7 @@ contract('SaveDAI', function (accounts) {
       it('should emit a WithdrawForDai event with the msg.sender\'s address and their total balance of insurance removed', async function () {
         const transaction = await savedaiInstance.withdrawForDai(saveDai, { from: userWallet });
 
-        // assert RemoveInsurance fires
+        // assert WithdrawForDai fires
         const event = await transaction.logs[9].event;
         assert.equal(event, 'WithdrawForDai');
 
