@@ -248,9 +248,9 @@ contract('SaveDAI', function (accounts) {
       saveDai = await savedaiInstance.balanceOf(userWallet);
       saveDai = saveDai.toNumber();
     });
-    describe('withdrawForCDaiAndOCDai', function () {
+    describe('withdrawForAssetandOTokens', function () {
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForCDaiAndOCDai(saveDai + 1), 'Must have sufficient balance');
+        await expectRevert(savedaiInstance.withdrawForAssetandOTokens(saveDai + 1), 'Must have sufficient balance');
       });
       it('should transfer _amount of ocDAI to msg.sender', async function () {
         // Idenitfy the user's initial ocDAI balance
@@ -258,7 +258,7 @@ contract('SaveDAI', function (accounts) {
 
         // Remove userWallet's insurance
         // unbundle saveDAI and send user back _amount of ocDAI
-        await savedaiInstance.withdrawForCDaiAndOCDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
 
         // Idenitfy the user's ocDAI balance after receiving ocDAI
         const finalUserBalance = await ocDaiInstance.balanceOf(userWallet);
@@ -274,7 +274,7 @@ contract('SaveDAI', function (accounts) {
 
         // Remove userWallelt's insurance
         // unbundle saveDAI and send user back _amount of cDAI
-        await savedaiInstance.withdrawForCDaiAndOCDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
 
         // Idenitfy the user's cDAI balance after receiving cDAI
         const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
@@ -284,13 +284,13 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, saveDai);
       });
-      it('should emit a WithdrawForCDaiAndOCDai event with the msg.sender\'s address and their _amount of insurance removed', async function () {
+      it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and their _amount of insurance removed', async function () {
         // Remove _amount of userWallelt's insurance
-        const transaction = await savedaiInstance.withdrawForCDaiAndOCDai(saveDai, { from: userWallet });
+        const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
 
-        // assert WithdrawForCDaiAndOCDai fires
+        // assert WithdrawForAssetandOTokens fires
         const event = await transaction.logs[4].event;
-        assert.equal(event, 'WithdrawForCDaiAndOCDai');
+        assert.equal(event, 'WithdrawForAssetandOTokens');
 
         // assert msg.sender's address emits in the event
         const userAddress = await transaction.logs[4].args._user;
@@ -305,7 +305,7 @@ contract('SaveDAI', function (accounts) {
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
         // Remove _amount of userWallelt's insurance
-        await savedaiInstance.withdrawForCDaiAndOCDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
 
         // Idenitfy the user's final saveDAI balance
         const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
@@ -317,9 +317,9 @@ contract('SaveDAI', function (accounts) {
       });
     });
 
-    describe('withdrawForCDai', function () {
+    describe('withdrawForAsset', function () {
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForCDai(saveDai + 1, { from: userWallet }), 'Must have sufficient balance');
+        await expectRevert(savedaiInstance.withdrawForAsset(saveDai + 1, { from: userWallet }), 'Must have sufficient balance');
       });
       it('should transfer cDAI from saveDAI contract to user', async function () {
         // Identify initial cDAI balances
@@ -340,7 +340,7 @@ contract('SaveDAI', function (accounts) {
         cDaiMinted = new BN(cDaiMinted);
 
         // Remove userWallet's insurance
-        await savedaiInstance.withdrawForCDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
 
         // Identify final cDAI balance in saveDAI contract
         const finalcDAIbalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
@@ -353,12 +353,12 @@ contract('SaveDAI', function (accounts) {
 
         assert.approximately(diffInContract.toNumber(), diffInUser.toNumber(), 2);
       });
-      it('should emit a WithdrawForCDai event with the msg.sender\'s address and their total balance of insurance removed', async function () {
-        const transaction = await savedaiInstance.withdrawForCDai(saveDai, { from: userWallet });
+      it('should emit a WithdrawForAsset event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+        const transaction = await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
 
-        // assert WithdrawForCDai fires
+        // assert WithdrawForAsset fires
         const event = await transaction.logs[9].event;
-        assert.equal(event, 'WithdrawForCDai');
+        assert.equal(event, 'WithdrawForAsset');
 
         // assert msg.sender's address emits in the event
         const userAddress = await transaction.logs[9].args._user;
@@ -373,7 +373,7 @@ contract('SaveDAI', function (accounts) {
 
         // Remove userWallelt's insurance
         // unbundle saveDAI and send user back _amount of cDAI plus newly minted cDAI
-        await savedaiInstance.withdrawForCDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
 
         // Idenitfy the user's finanl saveDAI balance
         const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
@@ -385,9 +385,9 @@ contract('SaveDAI', function (accounts) {
       });
     });
 
-    describe('withdrawForDai', function () {
+    describe('withdrawForUnderlyingAsset', function () {
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForDai(saveDai + 1, { from: userWallet }), 'Must have sufficient balance');
+        await expectRevert(savedaiInstance.withdrawForUnderlyingAsset(saveDai + 1, { from: userWallet }), 'Must have sufficient balance');
       });
       it('should decrease saveDAI contract by cDAI and ocDAI', async function () {
         // Identify initial balances
@@ -395,7 +395,7 @@ contract('SaveDAI', function (accounts) {
         const initialocDaiBalanceContract = await ocDaiInstance.balanceOf(savedaiAddress);
 
         // Remove userWallet's insurance
-        await savedaiInstance.withdrawForDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // Identify final balances
         const finalcDAIbalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
@@ -429,7 +429,7 @@ contract('SaveDAI', function (accounts) {
         const daiBoughtTotal = daiBought1 + daiBought2;
 
         // Remove userWallet's insurance
-        await savedaiInstance.withdrawForDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // Idenitfy the user's updatedDaiBalance
         const updatedDaiBalance = await daiInstance.balanceOf(userWallet);
@@ -437,12 +437,12 @@ contract('SaveDAI', function (accounts) {
 
         assert.approximately(daiBoughtTotal, diff, 0.000000019);
       });
-      it('should emit a WithdrawForDai event with the msg.sender\'s address and their total balance of insurance removed', async function () {
-        const transaction = await savedaiInstance.withdrawForDai(saveDai, { from: userWallet });
+      it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+        const transaction = await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
-        // assert WithdrawForDai fires
+        // assert WithdrawForUnderlyingAsset fires
         const event = await transaction.logs[9].event;
-        assert.equal(event, 'WithdrawForDai');
+        assert.equal(event, 'WithdrawForUnderlyingAsset');
 
         // assert msg.sender's address emits in the event
         const userAddress = await transaction.logs[9].args._user;
@@ -457,7 +457,7 @@ contract('SaveDAI', function (accounts) {
 
         // Remove userWallelt's insurance
         // unbundle saveDAI and send user back DAI
-        await savedaiInstance.withdrawForDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // Idenitfy the user's finanl saveDAI balance
         const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
@@ -590,9 +590,9 @@ contract('SaveDAI', function (accounts) {
       saveDai = await savedaiInstance.balanceOf(userWallet);
       saveDai = saveDai.toNumber();
     });
-    describe('withdrawForCDaiAndOCDai', function () {
+    describe('withdrawForAssetandOTokens', function () {
       it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForCDaiAndOCDai(saveDai + 1), 'Must have sufficient balance');
+        await expectRevert(savedaiInstance.withdrawForAssetandOTokens(saveDai + 1), 'Must have sufficient balance');
       });
       it('should transfer _amount of cDAI to msg.sender', async function () {
         // Increase time so ocDAI has expired
@@ -603,7 +603,7 @@ contract('SaveDAI', function (accounts) {
 
         // Remove userWallelt's insurance
         // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
-        await savedaiInstance.withdrawForCDaiAndOCDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
 
         // Idenitfy the user's cDAI balance after receiving cDAI
         const finalUserBalance = await cDaiInstance.balanceOf(userWallet);
@@ -613,14 +613,14 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, saveDai);
       });
-      it('should emit a WithdrawForCDaiAndOCDai event with the msg.sender\'s address and the amount of insurance removed', async function () {
+      it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and the amount of insurance removed', async function () {
         // Remove userWallelt's insurance
         // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
-        const transaction = await savedaiInstance.withdrawForCDaiAndOCDai(saveDai, { from: userWallet });
+        const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
 
-        // assert WithdrawForCDaiAndOCDai fires
+        // assert WithdrawForAssetandOTokens fires
         const event = await transaction.logs[1].event;
-        assert.equal(event, 'WithdrawForCDaiAndOCDai');
+        assert.equal(event, 'WithdrawForAssetandOTokens');
 
         // assert msg.sender's address emits in the event
         const userAddress = await transaction.logs[1].args._user;
@@ -636,7 +636,7 @@ contract('SaveDAI', function (accounts) {
 
         // Remove userWallelt's insurance
         // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
-        await savedaiInstance.withdrawForCDaiAndOCDai(saveDai, { from: userWallet });
+        await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
 
         // Idenitfy the user's finanl saveDAI balance
         const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
@@ -648,23 +648,23 @@ contract('SaveDAI', function (accounts) {
       });
     });
 
-    describe('withdrawForCDai', function () {
+    describe('withdrawForAsset', function () {
       it('should revert if ocDAI has expired', async function () {
         // Mint SaveDAI tokens
         await helpers.mint(amount);
         saveDai = await savedaiInstance.balanceOf(userWallet);
         saveDai = saveDai.toNumber();
-        await expectRevert(savedaiInstance.withdrawForCDai(saveDai, { from: userWallet }), 'ocDAI must not have expired');
+        await expectRevert(savedaiInstance.withdrawForAsset(saveDai, { from: userWallet }), 'ocDAI must not have expired');
       });
     });
 
-    describe('WithdrawForDai', function () {
+    describe('withdrawForUnderlyingAsset', function () {
       it('should revert if ocDAI has expired', async function () {
         // Mint SaveDAI tokens
         await helpers.mint(amount);
         saveDai = await savedaiInstance.balanceOf(userWallet);
         saveDai = saveDai.toNumber();
-        await expectRevert(savedaiInstance.withdrawForDai(saveDai, { from: userWallet }), 'ocDAI must not have expired');
+        await expectRevert(savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet }), 'ocDAI must not have expired');
       });
     });
 

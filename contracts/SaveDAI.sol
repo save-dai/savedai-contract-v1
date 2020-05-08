@@ -45,9 +45,9 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     event ExerciseInsurance(uint256 _amount, uint256 _EthReturned, address _user);
     event UpdateTokenName(string _oldName, string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
-    event WithdrawForCDaiAndOCDai(address _user, uint256 _amount);
-    event WithdrawForCDai(address _user, uint256 _amount);
-    event WithdrawForDai(address _user, uint256 _amount);
+    event WithdrawForAssetandOTokens(address _user, uint256 _amount);
+    event WithdrawForAsset(address _user, uint256 _amount);
+    event WithdrawForUnderlyingAsset(address _user, uint256 _amount);
 
     /***************
     MODIFIERS
@@ -101,45 +101,45 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
 
     /**
     * @notice This function mints saveDAI tokens
-    * @param _desiredAmount The desired number of saveDAI to mint
+    * @param _amount The number of saveDAI to mint
     * @return The number of saveDAI tokens minted
     */
-    function mint(uint256 _desiredAmount) 
+    function mint(uint256 _amount) 
         external 
         whenNotPaused 
         returns (uint256) 
     {
-        // calculate DAI needed to mint _desiredAmount of cDAI and mint tokens
-        uint256 cDaiCost = _getCostOfCDAI(_desiredAmount);
+        // calculate DAI needed to mint _amount of cDAI and mint tokens
+        uint256 assetCost = _getCostOfCDAI(_amount);
 
-        require(dai.balanceOf(msg.sender) >= cDaiCost, "Must have sufficient balance");
+        require(dai.balanceOf(msg.sender) >= assetCost, "Must have sufficient balance");
 
         // transfer DAI needed for cDAI tokens
         dai.transferFrom(
             msg.sender,
             address(this),
-            cDaiCost
+            assetCost
         );
-        uint256 cDaiAmount = _mintCDAI(cDaiCost);
+        uint256 assetAmount = _mintCDAI(assetCost);
 
-        // calculate how much DAI we need to pay to insure cDaiAmount
-        uint256 ocDaiCost = getCostOfOCDai(cDaiAmount);
+        // calculate how much DAI we need to pay to insure assetAmount
+        uint256 oTokenCost = getCostOfOCDai(assetAmount);
 
-        require(dai.balanceOf(msg.sender) >= ocDaiCost, "Must have sufficient balance");
+        require(dai.balanceOf(msg.sender) >= oTokenCost, "Must have sufficient balance");
 
         // transfer DAI needed for premium for ocDAI tokens
         dai.transferFrom(
             msg.sender,
             address(this),
-            ocDaiCost
+            oTokenCost
         );
 
-        uint256 ocDaiAmount = _uniswapBuyOCDAI(ocDaiCost);
-        require(ocDaiAmount == cDaiAmount, "ocDAI tokens purchased must equal cDaiAmount minted");
+        uint256 oTokenAmount = _uniswapBuyOCDAI(oTokenCost);
+        require(oTokenAmount == assetAmount, "oTokens purchased must equal asset amount");
 
-        super._mint(msg.sender, ocDaiAmount);
+        super._mint(msg.sender, oTokenAmount);
 
-        uint256 amount = ocDaiAmount;
+        uint256 amount = oTokenAmount;
         emit Mint(amount, msg.sender);
 
         return amount;
@@ -179,14 +179,14 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @notice This function will unbundle your saveDAI and transfer ocDAI and cDAI to msg.sender
     * @param _amount The amount of saveDAI tokens to unbundle
     */
-    function withdrawForCDaiAndOCDai(uint256 _amount)
+    function withdrawForAssetandOTokens(uint256 _amount)
         public
         sufficientBalance(_amount)
     {
         if (ocDai.hasExpired()) {
             // transfer _amount of cDAI to msg.sender
             cDai.transferFrom(address(this), msg.sender, _amount);
-            emit WithdrawForCDaiAndOCDai(msg.sender, _amount);
+            emit WithdrawForAssetandOTokens(msg.sender, _amount);
             // burn _amount of saveDAI tokens
             _burn(msg.sender, _amount);
         } else {
@@ -195,7 +195,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
             ocDai.approve(address(this), _amount);
             // transfer _amount of ocDAI to msg.sender
             ocDai.transferFrom(address(this), msg.sender, _amount);
-            emit WithdrawForCDaiAndOCDai(msg.sender, _amount);
+            emit WithdrawForAssetandOTokens(msg.sender, _amount);
             // burn _amount of saveDAI tokens
             _burn(msg.sender, _amount);
         }
@@ -205,7 +205,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @notice This function will remove insurance and exchange your saveDAI for cDAI
     * @param _amount The amount of saveDAI tokens to unbundle
     */
-    function withdrawForCDai(uint256 _amount)
+    function withdrawForAsset(uint256 _amount)
         public
         sufficientBalance(_amount)
     {
@@ -218,7 +218,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
 
         // transfer the sum of the newly minted cDAI with the original _amount
         cDai.transferFrom(address(this), msg.sender, cDAItokens.add(_amount));
-        emit WithdrawForCDai(msg.sender, _amount);
+        emit WithdrawForAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
     }
 
@@ -226,7 +226,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @notice This function will remove insurance and exchange your saveDAI for DAI
     * @param _amount The amount of saveDAI tokens to unbundle
     */
-    function withdrawForDai(uint256 _amount)
+    function withdrawForUnderlyingAsset(uint256 _amount)
         public
         sufficientBalance(_amount)
     {
@@ -254,7 +254,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         //transfer DAI to msg.sender
         dai.transferFrom(address(this), msg.sender, daiTokens.add(daiRedeemed));
 
-        emit WithdrawForDai(msg.sender, _amount);
+        emit WithdrawForUnderlyingAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
     }
 
@@ -279,8 +279,8 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @return The value in DAI
     */
     function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
-        uint256 ocDaiCost = getCostOfOCDai(_saveDaiAmount);
-        return _getCostOfCDAI(_saveDaiAmount).add(ocDaiCost);
+        uint256 oTokenCost = getCostOfOCDai(_saveDaiAmount);
+        return _getCostOfCDAI(_saveDaiAmount).add(oTokenCost);
     }
 
     /*
