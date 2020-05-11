@@ -7,7 +7,7 @@ const {
 // mint SaveDAI tokens
 async function mint (_amount) {
   // Calculate how much DAI is needed to approve
-  const premium = await savedaiInstance.getCostOfOCDai.call(_amount);
+  const premium = await savedaiInstance.getCostOfOToken.call(_amount);
 
   let exchangeRate = await cDaiInstance.exchangeRateStored.call();
   exchangeRate = (exchangeRate.toString()) / 1e18;

@@ -78,7 +78,7 @@ contract('SaveDAI', function (accounts) {
     });
     it('should mint saveDAI tokens', async function () {
       // Calculate how much DAI is needed to approve
-      const premium = await savedaiInstance.getCostOfOCDai.call(amount);
+      const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
       let exchangeRate = await cDaiInstance.exchangeRateStored.call();
       exchangeRate = (exchangeRate.toString()) / 1e18;
@@ -138,7 +138,7 @@ contract('SaveDAI', function (accounts) {
       const initialBalance = await daiInstance.balanceOf(userWallet);
 
       // Calculate how much DAI is needed to approve
-      const premium = await savedaiInstance.getCostOfOCDai.call(amount);
+      const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
       await daiInstance.approve(savedaiAddress, initialBalance, { from: userWallet });
 
@@ -161,7 +161,7 @@ contract('SaveDAI', function (accounts) {
     });
     it('should emit the amount of tokens minted', async function () {
       // calculate amount needed for approval
-      const daiNeededForPremium = await savedaiInstance.getCostOfOCDai(amount);
+      const daiNeededForPremium = await savedaiInstance.getCostOfOToken(amount);
       const dai = ether(amount);
       const totalTransfer = daiNeededForPremium.add(dai);
       // approve saveDAI contract
@@ -172,7 +172,7 @@ contract('SaveDAI', function (accounts) {
     });
     it('should return the number of saveDAI tokens minted', async function () {
       // Calculate how much DAI is needed to approve
-      const premium = await savedaiInstance.getCostOfOCDai.call(amount);
+      const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
       let exchangeRate = await cDaiInstance.exchangeRateStored.call();
       exchangeRate = (exchangeRate.toString()) / 1e18;
@@ -190,9 +190,9 @@ contract('SaveDAI', function (accounts) {
       assert.equal(saveDaiTokens, amount -=1);
     });
   });
-  describe('getCostOfOCDai', function () {
+  describe('getCostOfOToken', function () {
     it('should return premium to pay for ocDAI tokens', async function () {
-      const premium = await savedaiInstance.getCostOfOCDai.call(amount);
+      const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
       // use exchange directly
       const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice.call(amount);
@@ -203,7 +203,7 @@ contract('SaveDAI', function (accounts) {
   });
   describe('saveDaiPriceInDaiCurrent', function () {
     it('should first identify the cost of ocDai', async function () {
-      let premium = await savedaiInstance.getCostOfOCDai(amount);
+      let premium = await savedaiInstance.getCostOfOToken(amount);
       premium = new BN(premium);
 
       ethAmount = await ocDaiExchange.getEthToTokenOutputPrice(amount);
@@ -215,7 +215,7 @@ contract('SaveDAI', function (accounts) {
       amount -= 1; // account for rounding issue
       const saveDaiPrice = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount) / 1e18;
 
-      const premium = await savedaiInstance.getCostOfOCDai(amount) / 1e18;
+      const premium = await savedaiInstance.getCostOfOToken(amount) / 1e18;
 
       const cDaiCostFromSaveDAIprice = saveDaiPrice - premium;
 
@@ -230,7 +230,7 @@ contract('SaveDAI', function (accounts) {
 
       amount = new BN(amount);
 
-      let premium = await savedaiInstance.getCostOfOCDai(amount);
+      let premium = await savedaiInstance.getCostOfOToken(amount);
       premium = new BN(premium);
 
       let cDaiCost = transaction.sub(premium);
