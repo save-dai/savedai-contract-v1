@@ -1,9 +1,16 @@
+```diff
+- Warning: this code has not been audited and may contain bugs and/or vulnerabilities.
+```
+<p align="center">
+  <img src="https://github.com/save-dai/save-dai.github.io/blob/master/img/services/saveDAI_logo_transparent.png" alt="saveDAI logo"/>
+</p>
+
 # saveDAI
 
 This repository contains the smart contracts for the saveDAI application. SaveDAI is an ERC20 token that wraps together an equivalant amount of cDAI and ocDAI to create what we call a "self-insured asset". Using the Compound, Opyn, and Uniswap protocols, this smart contract allows a user to mint a token asset that earns interest while staying protected against potential risks to the underlying value. 
 
 # Resources
-- Website: [savedai.xyz](https://save-dai.github.io/)
+- Website: [savedai.xyz](https://savedai.xyz)
 - Twitter: [@save_dai](https://twitter.com/save_dai)
 - Medium: [@savedai](https://medium.com/savedai)
 - Opyn Protocol: [opyn.co](https://opyn.co/#/)
