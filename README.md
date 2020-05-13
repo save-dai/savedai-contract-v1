@@ -15,6 +15,8 @@ This repository contains the smart contracts for the saveDAI application. SaveDA
 - Medium: [@savedai](https://medium.com/savedai)
 - Opyn Protocol: [opyn.co](https://opyn.co/#/)
 
+[![Sponsor me](https://res.cloudinary.com/dvargvav9/image/upload/v1581842794/button2_w5exua.svg)](https://flowerpot.network/save-dai?trigger=true)
+
 # Installation
 
 1. Run `git clone` to clone this repo.
