@@ -157,7 +157,7 @@ contract('SaveDAI', function (accounts) {
 
       const diff = initialBalance.sub(endingBalance) / 1e18;
 
-      assert.approximately(daiTotalTransfer, diff, 0.00000000001000);
+      assert.equal(daiTotalTransfer.toString().substring(0, 10), diff.toString().substring(0, 10));
     });
     it('should emit the amount of tokens minted', async function () {
       // calculate amount needed for approval
