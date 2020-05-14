@@ -25,12 +25,13 @@
     "truffle-hdwallet-provider": "^1.0.17"
   },
   "devDependencies": {
-    "es6": "0.0.7",
-    "eslint-plugin-mocha": "^6.3.0",
-    "truffle-flattener": "^1.4.2",
+    "@openzeppelin/test-environment": "^0.1.4",
     "@openzeppelin/test-helpers": "^0.5.5",
     "babel-eslint": "^10.1.0",
+    "es6": "0.0.7",
     "eslint": "^6.8.0",
-    "eslint-plugin-babel": "^5.3.0"
+    "eslint-plugin-babel": "^5.3.0",
+    "eslint-plugin-mocha": "^6.3.0",
+    "truffle-flattener": "^1.4.2"
   }
 }
