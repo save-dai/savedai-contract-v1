@@ -11,8 +11,9 @@ import "./lib/UniswapExchangeInterface.sol";
 import "./lib/UniswapFactoryInterface.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
+import "./lib/ISaveDAI.sol";
 
-contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
+contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     using SafeMath for uint256;
 
     /***************
@@ -152,8 +153,8 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
      */
     function exerciseInsurance(
         uint256 _amount,
-        address payable[] memory vaultsToExerciseFrom)
-        public
+        address payable[] calldata vaultsToExerciseFrom)
+        external
     {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
 
@@ -179,7 +180,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @param _amount The amount of saveDAI tokens to unbundle
     */
     function withdrawForAssetandOTokens(uint256 _amount)
-        public
+        external
         sufficientBalance(_amount)
     {
         if (ocDai.hasExpired()) {
@@ -205,7 +206,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @param _amount The amount of saveDAI tokens to unbundle
     */
     function withdrawForAsset(uint256 _amount)
-        public
+        external
         sufficientBalance(_amount)
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
@@ -226,7 +227,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @param _amount The amount of saveDAI tokens to unbundle
     */
     function withdrawForUnderlyingAsset(uint256 _amount)
-        public
+        external
         sufficientBalance(_amount)
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
@@ -277,7 +278,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
     * @return The value in DAI
     */
-    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) public returns (uint256) {
+    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) external returns (uint256) {
         uint256 oTokenCost = getCostOfOToken(_saveDaiAmount);
         return _getCostofAsset(_saveDaiAmount).add(oTokenCost);
     }
