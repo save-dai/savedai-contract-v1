@@ -43,7 +43,7 @@ contract('SaveDAI', function (accounts) {
       uniswapFactoryAddress,
       cDaiAddress,
       ocDaiAddress,
-      daiAddress
+      daiAddress,
     );
     savedaiAddress = savedai.address;
     savedaiInstance = await SaveDAI.at(savedaiAddress);
@@ -356,7 +356,7 @@ contract('SaveDAI', function (accounts) {
         diffInContract = initialcDaiBalanceContract.sub(finalcDAIbalanceContract).add(cDaiMinted);
         diffInUser = finalcDAIbalanceUser.sub(initialcDAIbalanceUser);
 
-        assert.approximately(diffInContract.toNumber(), diffInUser.toNumber(), 2);
+        assert.equal(diffInContract.toString().substring(0, 7), diffInUser.toString().substring(0, 7));
       });
       it('should emit a WithdrawForAsset event with the msg.sender\'s address and their total balance of insurance removed', async function () {
         const transaction = await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
