@@ -21,12 +21,13 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     // Variable to set distant deadline for Uniswap tokenToTokenSwap transactions
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
 
-    // mainnet addresses
-    address public daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-    address public ocDaiAddress = 0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33;
-    address public cDaiAddress = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643;
-    address public uniswapFactoryAddress = 0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95;
+    // addresses
+    address public daiAddress;
+    address public ocDaiAddress;
+    address public cDaiAddress;
+    address public uniswapFactoryAddress;
 
+    // interfaces
     UniswapFactoryInterface public uniswapFactory;
     UniswapExchangeInterface public daiUniswapExchange;
     UniswapExchangeInterface public ocDaiExchange;
@@ -56,9 +57,18 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         _;
     }
 
-    constructor() ERC20Detailed("saveDAI_20210210", "saveDAI", 8)
+    constructor(
+        address daiAddr,
+        address ocDaiAddr,
+        address cDaiAddr,
+        address uniswapFactoryAddr,      
+    ) ERC20Detailed("saveDAI_20210210", "saveDAI", 8)
         public
     {
+        daiAddress = daiAddr;
+        ocDaiAddress = ocDaiAddr;
+        cDaiAddress = cDaiAddr;
+        uniswapFactoryAddress = uniswapFactoryAddr;
         cDai = CTokenInterface(cDaiAddress);
         ocDai = OTokenInterface(ocDaiAddress);
         dai = IERC20(daiAddress);
