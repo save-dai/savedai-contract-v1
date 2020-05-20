@@ -21,12 +21,6 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     // Variable to set distant deadline for Uniswap tokenToTokenSwap transactions
     uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
 
-    // addresses
-    address public daiAddress;
-    address public ocDaiAddress;
-    address public cDaiAddress;
-    address public uniswapFactoryAddress;
-
     // interfaces
     UniswapFactoryInterface public uniswapFactory;
     UniswapExchangeInterface public daiUniswapExchange;
@@ -58,17 +52,13 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     }
 
     constructor(
-        address daiAddr,
-        address ocDaiAddr,
-        address cDaiAddr,
-        address uniswapFactoryAddr,      
+        address uniswapFactoryAddress,
+        address cDaiAddress,
+        address ocDaiAddress,
+        address daiAddress
     ) ERC20Detailed("saveDAI_20210210", "saveDAI", 8)
         public
     {
-        daiAddress = daiAddr;
-        ocDaiAddress = ocDaiAddr;
-        cDaiAddress = cDaiAddr;
-        uniswapFactoryAddress = uniswapFactoryAddr;
         cDai = CTokenInterface(cDaiAddress);
         ocDai = OTokenInterface(ocDaiAddress);
         dai = IERC20(daiAddress);
@@ -168,8 +158,8 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
 
         // approve ocDai contract to spend both ocDai and cDai
-        ocDai.approve(address(ocDaiAddress), _amount);
-        cDai.approve(address(ocDaiAddress), _amount);
+        ocDai.approve(address(ocDai), _amount);
+        cDai.approve(address(ocDai), _amount);
 
         address payable saveDai = address(this);
         uint256 balanceBefore = saveDai.balance;
@@ -355,7 +345,7 @@ contract SaveDAI is ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         // identify the current balance of the saveDAI contract
         uint256 initialBalance = cDai.balanceOf(address(this));
         // saveDAI gives Compound allowance to transfer DAI tokens
-        dai.approve(cDaiAddress, _amount);
+        dai.approve(address(cDai), _amount);
         // mint cDai
         cDai.mint(_amount);
         // identify the updated balance of the saveDAI contract

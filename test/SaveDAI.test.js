@@ -39,7 +39,12 @@ contract('SaveDAI', function (accounts) {
   increaseTime = 26409094;
 
   beforeEach(async function () {
-    savedai = await SaveDAI.new();
+    savedai = await SaveDAI.new(
+      uniswapFactoryAddress,
+      cDaiAddress,
+      ocDaiAddress,
+      daiAddress
+    );
     savedaiAddress = savedai.address;
     savedaiInstance = await SaveDAI.at(savedaiAddress);
 

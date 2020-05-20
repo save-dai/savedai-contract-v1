@@ -20,6 +20,12 @@ module.exports = function (deployer) {
       cDaiAddr = "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643";
       ocDaiAddr = "0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33";
       daiAddr = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    } else {
+      // local ganache
+      uniswapFactoryAddr = "0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95";
+      cDaiAddr = "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643";
+      ocDaiAddr = "0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33";
+      daiAddr = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
     }
 
     // For all testnets / mainnets
