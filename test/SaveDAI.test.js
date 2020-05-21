@@ -254,9 +254,6 @@ contract('SaveDAI', function (accounts) {
       saveDai = saveDai.toNumber();
     });
     describe('withdrawForAssetandOTokens', function () {
-      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForAssetandOTokens(saveDai + 1), 'Must have sufficient balance');
-      });
       it('should transfer _amount of ocDAI to msg.sender', async function () {
         // Idenitfy the user's initial ocDAI balance
         const initialBalance = await ocDaiInstance.balanceOf(userWallet);
@@ -323,9 +320,6 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('withdrawForAsset', function () {
-      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForAsset(saveDai + 1, { from: userWallet }), 'Must have sufficient balance');
-      });
       it('should transfer cDAI from saveDAI contract to user', async function () {
         // Identify initial cDAI balances
         const initialcDaiBalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
@@ -391,9 +385,6 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('withdrawForUnderlyingAsset', function () {
-      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForUnderlyingAsset(saveDai + 1, { from: userWallet }), 'Must have sufficient balance');
-      });
       it('should decrease saveDAI contract by cDAI and ocDAI', async function () {
         // Identify initial balances
         const initialcDaiBalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
@@ -570,21 +561,6 @@ contract('SaveDAI', function (accounts) {
         // check that the right events were emitted
         expectEvent(txReceipt, 'ExerciseInsurance');
       });
-      it('should revert if user does not have sufficient balance', async function () {
-        // use larger number for amtToExercise
-        let amtToExercise = await savedaiInstance.balanceOf(userWallet);
-        amtToExercise = amtToExercise.add(new BN(100));
-        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
-
-        await expectRevert(
-          savedaiInstance.exerciseInsurance(
-            amtToExercise,
-            vaultArray,
-            { from: userWallet },
-          ),
-          'Must have sufficient balance',
-        );
-      });
     });
   });
 
@@ -596,9 +572,6 @@ contract('SaveDAI', function (accounts) {
       saveDai = saveDai.toNumber();
     });
     describe('withdrawForAssetandOTokens', function () {
-      it('should revert if msg.sender does not have the _amount of saveDAI tokens', async function () {
-        await expectRevert(savedaiInstance.withdrawForAssetandOTokens(saveDai + 1), 'Must have sufficient balance');
-      });
       it('should transfer _amount of cDAI to msg.sender', async function () {
         // Increase time so ocDAI has expired
         await time.increase(increaseTime);

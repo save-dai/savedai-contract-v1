@@ -44,14 +44,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     event WithdrawForAsset(address _user, uint256 _amount);
     event WithdrawForUnderlyingAsset(address _user, uint256 _amount);
 
-    /***************
-    MODIFIERS
-    ***************/
-    modifier sufficientBalance(uint256 _amount) {
-        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-        _;
-    }
-
     constructor(
         address uniswapFactoryAddress,
         address cDaiAddress,
@@ -156,8 +148,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
         address payable[] calldata vaultsToExerciseFrom)
         external
     {
-        require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
-
         // approve ocDai contract to spend both ocDai and cDai
         require(ocDai.approve(address(ocDai), _amount));
         require(cDai.approve(address(ocDai), _amount));
@@ -181,7 +171,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     */
     function withdrawForAssetandOTokens(uint256 _amount)
         external
-        sufficientBalance(_amount)
     {
         if (!ocDai.hasExpired()) {
             require(ocDai.approve(address(this), _amount));
@@ -203,7 +192,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     */
     function withdrawForAsset(uint256 _amount)
         external
-        sufficientBalance(_amount)
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
         // swap _amount of ocDAI on Uniswap for DAI
@@ -224,7 +212,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     */
     function withdrawForUnderlyingAsset(uint256 _amount)
         external
-        sufficientBalance(_amount)
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
 
