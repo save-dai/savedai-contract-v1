@@ -4,7 +4,7 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Pausable.sol";
+import "@openzeppelin/contracts/lifecycle/Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./lib/UniswapExchangeInterface.sol";
@@ -13,7 +13,7 @@ import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 import "./lib/ISaveDAI.sol";
 
-contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
+contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     using SafeMath for uint256;
 
     /***************
