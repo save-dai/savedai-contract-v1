@@ -115,11 +115,11 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         require(dai.balanceOf(msg.sender) >= assetCost, "Must have sufficient balance");
 
         // transfer DAI needed for cDAI tokens
-        dai.transferFrom(
+        require(dai.transferFrom(
             msg.sender,
             address(this),
             assetCost
-        );
+        ));
         uint256 assetAmount = _mintCDai(assetCost);
 
         // calculate how much DAI we need to pay to insure assetAmount
@@ -128,11 +128,11 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         require(dai.balanceOf(msg.sender) >= oTokenCost, "Must have sufficient balance");
 
         // transfer DAI needed for premium for ocDAI tokens
-        dai.transferFrom(
+        require(dai.transferFrom(
             msg.sender,
             address(this),
             oTokenCost
-        );
+        ));
 
         uint256 oTokenAmount = _uniswapBuyOCDai(oTokenCost);
         require(oTokenAmount == assetAmount, "oTokens purchased must equal asset amount");
@@ -159,8 +159,8 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         require(balanceOf(msg.sender) >= _amount, "Must have sufficient balance");
 
         // approve ocDai contract to spend both ocDai and cDai
-        ocDai.approve(address(ocDai), _amount);
-        cDai.approve(address(ocDai), _amount);
+        require(ocDai.approve(address(ocDai), _amount));
+        require(cDai.approve(address(ocDai), _amount));
 
         address payable saveDai = address(this);
         uint256 balanceBefore = saveDai.balance;
@@ -185,16 +185,16 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     {
         if (ocDai.hasExpired()) {
             // transfer _amount of cDAI to msg.sender
-            cDai.transferFrom(address(this), msg.sender, _amount);
+            require(cDai.transferFrom(address(this), msg.sender, _amount));
             emit WithdrawForAssetandOTokens(msg.sender, _amount);
             // burn _amount of saveDAI tokens
             _burn(msg.sender, _amount);
         } else {
             // transfer _amount of cDAI to msg.sender
-            cDai.transferFrom(address(this), msg.sender, _amount);
-            ocDai.approve(address(this), _amount);
+            require(cDai.transferFrom(address(this), msg.sender, _amount));
+            require(ocDai.approve(address(this), _amount));
             // transfer _amount of ocDAI to msg.sender
-            ocDai.transferFrom(address(this), msg.sender, _amount);
+            require(ocDai.transferFrom(address(this), msg.sender, _amount));
             emit WithdrawForAssetandOTokens(msg.sender, _amount);
             // burn _amount of saveDAI tokens
             _burn(msg.sender, _amount);
@@ -217,7 +217,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         uint256 cDAItokens = _mintCDai(daiTokens);
 
         // transfer the sum of the newly minted cDAI with the original _amount
-        cDai.transferFrom(address(this), msg.sender, cDAItokens.add(_amount));
+        require(cDai.transferFrom(address(this), msg.sender, cDAItokens.add(_amount)));
         emit WithdrawForAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
     }
@@ -244,15 +244,15 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         uint256 daiRedeemed = updatedDaiBalance.sub(initiaDaiBalance);
 
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
-        ocDai.approve(address(ocDaiExchange), _amount);
+        require(ocDai.approve(address(ocDaiExchange), _amount));
 
         uint256 daiTokens = _uniswapBuyDai(_amount);
 
         // saveDAI gives DAI contract allowance to transfer DAI tokens
-        dai.approve(address(this), daiTokens.add(daiRedeemed));
+        require(dai.approve(address(this), daiTokens.add(daiRedeemed)));
 
         //transfer DAI to msg.sender
-        dai.transferFrom(address(this), msg.sender, daiTokens.add(daiRedeemed));
+        require(dai.transferFrom(address(this), msg.sender, daiTokens.add(daiRedeemed)));
 
         emit WithdrawForUnderlyingAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
@@ -299,7 +299,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     */
     function _uniswapBuyOCDai(uint256 _premium) internal returns (uint256) {
         // saveDAI gives uniswap exchange allowance to transfer DAI tokens
-        dai.approve(address(daiUniswapExchange), _premium);
+        require(dai.approve(address(daiUniswapExchange), _premium));
 
         return daiUniswapExchange.tokenToTokenSwapInput (
                 _premium, // tokens sold
@@ -316,7 +316,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
     */
     function _uniswapBuyDai(uint256 _ocDaiTokens) internal returns (uint256) {
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
-        ocDai.approve(address(ocDaiExchange), _ocDaiTokens);
+        require(ocDai.approve(address(ocDaiExchange), _ocDaiTokens));
 
         return ocDaiExchange.tokenToTokenSwapInput (
             _ocDaiTokens, // tokens sold
@@ -346,7 +346,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         // identify the current balance of the saveDAI contract
         uint256 initialBalance = cDai.balanceOf(address(this));
         // saveDAI gives Compound allowance to transfer DAI tokens
-        dai.approve(address(cDai), _amount);
+        require(dai.approve(address(cDai), _amount));
         // mint cDai
         cDai.mint(_amount);
         // identify the updated balance of the saveDAI contract
