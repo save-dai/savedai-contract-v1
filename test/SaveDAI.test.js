@@ -356,15 +356,15 @@ contract('SaveDAI', function (accounts) {
         const transaction = await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
 
         // assert WithdrawForAsset fires
-        const event = await transaction.logs[9].event;
+        const event = await transaction.logs[8].event;
         assert.equal(event, 'WithdrawForAsset');
 
         // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[9].args._user;
+        const userAddress = await transaction.logs[8].args._user;
         assert.equal(userAddress.toLowerCase(), userWallet);
 
         // assert the correct amount of ocDAI (insurance) was removed
-        const insuranceRemovedAmount = await transaction.logs[9].args._amount;
+        const insuranceRemovedAmount = await transaction.logs[8].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
       it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
@@ -437,15 +437,15 @@ contract('SaveDAI', function (accounts) {
         const transaction = await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // assert WithdrawForUnderlyingAsset fires
-        const event = await transaction.logs[9].event;
+        const event = await transaction.logs[8].event;
         assert.equal(event, 'WithdrawForUnderlyingAsset');
 
         // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[9].args._user;
+        const userAddress = await transaction.logs[8].args._user;
         assert.equal(userAddress.toLowerCase(), userWallet);
 
         // assert the correct amount of ocDAI (insurance) was removed
-        const insuranceRemovedAmount = await transaction.logs[9].args._amount;
+        const insuranceRemovedAmount = await transaction.logs[8].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
       it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
@@ -572,7 +572,7 @@ contract('SaveDAI', function (accounts) {
       saveDai = saveDai.toNumber();
     });
     describe('withdrawForAssetandOTokens', function () {
-      it('should transfer _amount of cDAI to msg.sender', async function () {
+      it.only('should transfer _amount of cDAI to msg.sender', async function () {
         // Increase time so ocDAI has expired
         await time.increase(increaseTime);
 

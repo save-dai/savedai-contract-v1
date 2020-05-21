@@ -20,7 +20,10 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     GLOBAL CONSTANTS
     ***************/
     // Variable to set distant deadline for Uniswap tokenToTokenSwap transactions
-    uint256 constant LARGE_BLOCK_SIZE = 1651753129000;
+    uint256 constant LARGE_BLOCK_SIZE = 1099511627776;
+
+    // Variable used to set near infinite approval allowances
+    uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
 
     // interfaces
     UniswapFactoryInterface public uniswapFactory;
@@ -58,6 +61,12 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
         uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
         daiUniswapExchange = _getExchange(daiAddress);
         ocDaiExchange = _getExchange(ocDaiAddress);
+
+        require(
+            dai.approve(address(this), LARGE_APPROVAL_NUMBER) && 
+            dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER) &&
+            dai.approve(address(cDai), LARGE_APPROVAL_NUMBER)
+        );
     }
 
     /**
@@ -231,9 +240,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
 
         uint256 daiTokens = _uniswapBuyDai(_amount);
 
-        // saveDAI gives DAI contract allowance to transfer DAI tokens
-        require(dai.approve(address(this), daiTokens.add(daiRedeemed)));
-
         //transfer DAI to msg.sender
         require(dai.transferFrom(address(this), msg.sender, daiTokens.add(daiRedeemed)));
 
@@ -281,9 +287,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     * @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function
     */
     function _uniswapBuyOCDai(uint256 _premium) internal returns (uint256) {
-        // saveDAI gives uniswap exchange allowance to transfer DAI tokens
-        require(dai.approve(address(daiUniswapExchange), _premium));
-
         return daiUniswapExchange.tokenToTokenSwapInput (
                 _premium, // tokens sold
                 1, // min_tokens_bought
@@ -328,8 +331,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     function _mintCDai(uint256 _amount) internal returns (uint256) {
         // identify the current balance of the saveDAI contract
         uint256 initialBalance = cDai.balanceOf(address(this));
-        // saveDAI gives Compound allowance to transfer DAI tokens
-        require(dai.approve(address(cDai), _amount));
         // mint cDai
         cDai.mint(_amount);
         // identify the updated balance of the saveDAI contract
