@@ -183,22 +183,18 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, ERC20Pausable, Ownable {
         external
         sufficientBalance(_amount)
     {
-        if (ocDai.hasExpired()) {
-            // transfer _amount of cDAI to msg.sender
-            require(cDai.transferFrom(address(this), msg.sender, _amount));
-            emit WithdrawForAssetandOTokens(msg.sender, _amount);
-            // burn _amount of saveDAI tokens
-            _burn(msg.sender, _amount);
-        } else {
-            // transfer _amount of cDAI to msg.sender
-            require(cDai.transferFrom(address(this), msg.sender, _amount));
+        if (!ocDai.hasExpired()) {
             require(ocDai.approve(address(this), _amount));
             // transfer _amount of ocDAI to msg.sender
-            require(ocDai.transferFrom(address(this), msg.sender, _amount));
-            emit WithdrawForAssetandOTokens(msg.sender, _amount);
-            // burn _amount of saveDAI tokens
-            _burn(msg.sender, _amount);
+            require(ocDai.transferFrom(address(this), msg.sender, _amount));            
         }
+
+        // transfer _amount of cDAI to msg.sender
+        require(cDai.transferFrom(address(this), msg.sender, _amount));
+
+        // burn _amount of saveDAI tokens
+        _burn(msg.sender, _amount);
+        emit WithdrawForAssetandOTokens(msg.sender, _amount);
     }
 
     /**
