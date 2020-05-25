@@ -572,7 +572,7 @@ contract('SaveDAI', function (accounts) {
       saveDai = saveDai.toNumber();
     });
     describe('withdrawForAssetandOTokens', function () {
-      it.only('should transfer _amount of cDAI to msg.sender', async function () {
+      it('should transfer _amount of cDAI to msg.sender', async function () {
         // Increase time so ocDAI has expired
         await time.increase(increaseTime);
 

@@ -113,8 +113,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
         // calculate DAI needed to mint _amount of cDAI and mint tokens
         uint256 assetCost = _getCostofAsset(_amount);
 
-        require(dai.balanceOf(msg.sender) >= assetCost, "Must have sufficient balance");
-
         // transfer DAI needed for cDAI tokens
         require(dai.transferFrom(
             msg.sender,
@@ -125,8 +123,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
 
         // calculate how much DAI we need to pay to insure assetAmount
         uint256 oTokenCost = getCostOfOToken(assetAmount);
-
-        require(dai.balanceOf(msg.sender) >= oTokenCost, "Must have sufficient balance");
 
         // transfer DAI needed for premium for ocDAI tokens
         require(dai.transferFrom(
