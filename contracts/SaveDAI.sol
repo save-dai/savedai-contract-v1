@@ -108,38 +108,32 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     function mint(uint256 _amount)
         external
         whenNotPaused
-        returns (uint256)
+        returns (bool)
     {
         // calculate DAI needed to mint _amount of cDAI and mint tokens
         uint256 assetCost = _getCostofAsset(_amount);
 
-        // transfer DAI needed for cDAI tokens
-        require(dai.transferFrom(
+        // calculate DAI needed to buy _amount of ocDAI tokens
+        uint256 oTokenCost = getCostOfOToken(_amount);
+
+        // transfer total DAI needed
+        dai.transferFrom(
             msg.sender,
             address(this),
-            assetCost
-        ));
+            (assetCost.add(oTokenCost))
+        );
+
         uint256 assetAmount = _mintCDai(assetCost);
-
-        // calculate how much DAI we need to pay to insure assetAmount
-        uint256 oTokenCost = getCostOfOToken(assetAmount);
-
-        // transfer DAI needed for premium for ocDAI tokens
-        require(dai.transferFrom(
-            msg.sender,
-            address(this),
-            oTokenCost
-        ));
-
         uint256 oTokenAmount = _uniswapBuyOCDai(oTokenCost);
-        require(oTokenAmount == assetAmount, "oTokens purchased must equal asset amount");
 
-        super._mint(msg.sender, oTokenAmount);
+        require(assetAmount == _amount, "cDAI minted must equal _amount");
+        require(oTokenAmount == _amount, "oTokens purchased must equal _amount");
 
-        uint256 amount = oTokenAmount;
-        emit Mint(amount, msg.sender);
+        super._mint(msg.sender, _amount);
 
-        return amount;
+        emit Mint(_amount, msg.sender);
+
+        return true;
     }
 
     /**
@@ -275,9 +269,9 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
         // calculate DAI needed to mint _amount of cDAI
         uint256 exchangeRate = cDai.exchangeRateCurrent();
         emit ExchangeRate(exchangeRate);
-        return _amount.mul(exchangeRate).div(10**18);
+        return _amount.mul(exchangeRate).add(10**18-1).div(10**18);
     }
-
+ 
     /**
     * @notice This function buys ocDAI tokens on uniswap
     * @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function

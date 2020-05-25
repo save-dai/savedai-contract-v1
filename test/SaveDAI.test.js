@@ -99,45 +99,13 @@ contract('SaveDAI', function (accounts) {
       await savedaiInstance.mint(amount, { from: userWallet });
 
       const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-      console.log('ocDAI tokens minted, in saveDAI contract', ocDAIbalance.toString());
-
       const cDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
-      console.log('cDAI tokens minted, in saveDAI contract', cDAIbalance.toString());
-
       const saveDaiMinted = await savedaiInstance.balanceOf(userWallet);
-      console.log('saveDAI tokens minted, in userWallet', saveDaiMinted.toString());
+
       // all token balances should match
-      assert.equal(cDAIbalance.toString(), saveDaiMinted.toString());
-      assert.equal(ocDAIbalance.toString(), saveDaiMinted.toString());
-
-      let underlying = await cDaiInstance.balanceOfUnderlying.call(savedaiAddress);
-      underlying = underlying / 1e18;
-      console.log('underlying balance of cDAI tokens', underlying.toString());
-    });
-    it('should use the delta in the balance of cDAI to mint the correct number of saveDAI tokens', async function () {
-      // get contract's initial cDAI balance
-      const initialcDaiBalance = await cDaiInstance.balanceOf(savedaiAddress);
-
-      // get user's initial saveDAI balance
-      const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-
-      // mint saveDAI tokens first time
-      await helpers.mint(amount, { from: userWallet });
-
-      // mint saveDAI tokens second time
-      await helpers.mint(amount, { from: userWallet });
-
-      // contract's final cDAI balance
-      const finalcDaiBalance = await cDaiInstance.balanceOf(savedaiAddress);
-
-      // get user's final saveDAI balance
-      const finalSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
-      // get contract's cDAI delta
-      const cDaidelta = finalcDaiBalance - initialcDaiBalance;
-      // get user's saveDAI delta
-      const saveDaiDelta = finalSaveDaiBalance - initialSaveDaiBalance;
-
-      assert.equal(cDaidelta, saveDaiDelta);
+      assert.equal(cDAIbalance.toString(), amount);
+      assert.equal(ocDAIbalance.toString(), amount);
+      assert.equal(saveDaiMinted.toString(), amount);
     });
     it('should decrease userWallet DAI balance', async function () {
       const initialBalance = await daiInstance.balanceOf(userWallet);
@@ -175,7 +143,7 @@ contract('SaveDAI', function (accounts) {
       const { logs } = await savedaiInstance.mint(amount, { from: userWallet });
       expectEvent.inLogs(logs, 'Mint');
     });
-    it('should return the number of saveDAI tokens minted', async function () {
+    it('should return true', async function () {
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
@@ -190,9 +158,8 @@ contract('SaveDAI', function (accounts) {
       await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
 
       // mint saveDAI tokens
-      const saveDaiTokens = await savedaiInstance.mint.call(amount, { from: userWallet });
-
-      assert.equal(saveDaiTokens, amount -=1);
+      const bool = await savedaiInstance.mint.call(amount, { from: userWallet });
+      assert.isTrue(bool);
     });
   });
   describe('getCostOfOToken', function () {
