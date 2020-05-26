@@ -6,14 +6,13 @@ import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/lifecycle/Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./lib/UniswapExchangeInterface.sol";
 import "./lib/UniswapFactoryInterface.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 import "./lib/ISaveDAI.sol";
 
-contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
+contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     using SafeMath for uint256;
 
     /***************
@@ -41,7 +40,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
     ***************/
     event Mint(uint256 _amount, address _recipient);
     event ExerciseInsurance(uint256 _amount, uint256 _EthReturned, address _user);
-    event UpdateTokenName(string _oldName, string _newName);
+    event UpdateTokenName(string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
     event WithdrawForAssetandOTokens(address _user, uint256 _amount);
     event WithdrawForAsset(address _user, uint256 _amount);
@@ -63,7 +62,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
         ocDaiExchange = _getExchange(ocDaiAddress);
 
         require(
-            dai.approve(address(this), LARGE_APPROVAL_NUMBER) && 
+            dai.approve(address(this), LARGE_APPROVAL_NUMBER) &&
             dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER) &&
             dai.approve(address(cDai), LARGE_APPROVAL_NUMBER)
         );
@@ -71,16 +70,16 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable, Ownable {
 
     /**
     * @notice Will update the token name
-    * @param _newName The new name for the token
     * @return Returns the new token name
     */
-    function updateTokenName(string memory _newName)
+    function updateTokenName()
         public
-        onlyOwner
+        returns (string memory)
     {
-        require(bytes(_newName).length > 0, 'The _newName argument must not be empty');
-        emit UpdateTokenName(name(), _newName);
-        _name = _newName;
+        require(ocDai.hasExpired(), "Token must have expired");
+        _name = string(abi.encodePacked(name(), '_expired'));
+        emit UpdateTokenName(name());
+        return _name;
     }
 
     /**

@@ -212,7 +212,12 @@ contract('SaveDAI', function (accounts) {
       assert.equal(amountOfDAI.toString(), transaction.toString());
     });
   });
-
+  describe('name', function () {
+    it('should return the inital token name if updateTokenName has not been called', async function () {
+      initialTokenName = await savedaiInstance.name();
+      assert.equal(initialTokenName, 'saveDAI_20210210');
+    });
+  });
   context('when ocDAI has NOT expired', function () {
     beforeEach(async function () {
       // Mint SaveDAI tokens
@@ -529,6 +534,11 @@ contract('SaveDAI', function (accounts) {
         expectEvent(txReceipt, 'ExerciseInsurance');
       });
     });
+    describe('updateTokenName', function () {
+      it('should revert', async function () {
+        await expectRevert(savedaiInstance.updateTokenName(), 'Token must have expired');
+      });
+    });
   });
 
   context('when ocDAI has expired', function () {
@@ -628,35 +638,21 @@ contract('SaveDAI', function (accounts) {
         );
       });
     });
-  });
 
-  describe('updateTokenName', function () {
-    it('should revert if not called by the owner', async function () {
-      await expectRevert(savedaiInstance.updateTokenName('newTokenName', { from: notOwner }), 'Ownable: caller is not the owner');
-    });
-    it('should revert if _newName is empty', async function () {
-      await expectRevert(savedaiInstance.updateTokenName('', { from: owner }), 'The _newName argument must not be empty');
-    });
-    it('should update and return the new ERC20 token name', async function () {
-      await savedaiInstance.updateTokenName('newTokenName');
-      newTokenName = await savedaiInstance.name();
-      assert.strictEqual(newTokenName, 'newTokenName');
-    });
-    it('should emit both the new and old ERC20 token name', async function () {
-      const { logs } = await savedaiInstance.updateTokenName('newTokenName');
-      expectEvent.inLogs(logs, 'UpdateTokenName');
-    });
-  });
-
-  describe('name', function () {
-    it('should return the inital token name if updateTokenName has not been called', async function () {
-      initialTokenName = await savedaiInstance.name();
-      assert.equal(initialTokenName, 'saveDAI_20210210');
-    });
-    it('should return the new token name if updateTokenName has been called', async function () {
-      await savedaiInstance.updateTokenName('newTokenName');
-      newTokenName = await savedaiInstance.name();
-      assert.strictEqual(newTokenName, 'newTokenName');
+    describe('updateTokenName', function () {
+      it('should return the new name', async function () {
+        const newName = await savedaiInstance.updateTokenName.call();
+        assert.equal(newName, 'saveDAI_20210210_expired');
+      });
+      it('should set new name', async function () {
+        await savedaiInstance.updateTokenName();
+        const newName = await savedaiInstance.name();
+        assert.equal(newName, 'saveDAI_20210210_expired');
+      });
+      it('should emit both the new token name', async function () {
+        const { logs } = await savedaiInstance.updateTokenName();
+        expectEvent.inLogs(logs, 'UpdateTokenName');
+      });
     });
   });
 
