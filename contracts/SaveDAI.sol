@@ -101,7 +101,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     /**
     * @notice This function mints saveDAI tokens
     * @param _amount The number of saveDAI to mint
-    * @return The number of saveDAI tokens minted
+    * @return Returns true if executed successfully
     */
     function mint(uint256 _amount)
         external
