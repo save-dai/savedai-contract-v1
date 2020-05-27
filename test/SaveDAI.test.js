@@ -261,17 +261,16 @@ contract('SaveDAI', function (accounts) {
       it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and their _amount of insurance removed', async function () {
         // Remove _amount of userWallelt's insurance
         const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
-
         // assert WithdrawForAssetandOTokens fires
-        const event = await transaction.logs[5].event;
+        const event = await transaction.logs[3].event;
         assert.equal(event, 'WithdrawForAssetandOTokens');
 
         // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[5].args._user;
+        const userAddress = await transaction.logs[3].args._user;
         assert.equal(userAddress.toLowerCase(), userWallet);
 
         // assert the correct amount of ocDAI insurance coverage was removed
-        const insuranceRemovedAmount = await transaction.logs[5].args._amount;
+        const insuranceRemovedAmount = await transaction.logs[3].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
@@ -326,7 +325,6 @@ contract('SaveDAI', function (accounts) {
       });
       it('should emit a WithdrawForAsset event with the msg.sender\'s address and their total balance of insurance removed', async function () {
         const transaction = await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
-
         // assert WithdrawForAsset fires
         const event = await transaction.logs[8].event;
         assert.equal(event, 'WithdrawForAsset');

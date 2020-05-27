@@ -62,7 +62,6 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         ocDaiExchange = _getExchange(ocDaiAddress);
 
         require(
-            dai.approve(address(this), LARGE_APPROVAL_NUMBER) &&
             dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER) &&
             dai.approve(address(cDai), LARGE_APPROVAL_NUMBER)
         );
@@ -116,10 +115,12 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         uint256 oTokenCost = getCostOfOToken(_amount);
 
         // transfer total DAI needed
-        dai.transferFrom(
-            msg.sender,
-            address(this),
-            (assetCost.add(oTokenCost))
+        require(
+            dai.transferFrom(
+                msg.sender,
+                address(this),
+                (assetCost.add(oTokenCost))
+            )
         );
 
         uint256 assetAmount = _mintCDai(assetCost);
@@ -171,13 +172,12 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         external
     {
         if (!ocDai.hasExpired()) {
-            require(ocDai.approve(address(this), _amount));
             // transfer _amount of ocDAI to msg.sender
-            require(ocDai.transferFrom(address(this), msg.sender, _amount));            
+            require(ocDai.transfer(msg.sender, _amount));
         }
 
         // transfer _amount of cDAI to msg.sender
-        require(cDai.transferFrom(address(this), msg.sender, _amount));
+        require(cDai.transfer(msg.sender, _amount));
 
         // burn _amount of saveDAI tokens
         _burn(msg.sender, _amount);
@@ -199,7 +199,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         uint256 cDAItokens = _mintCDai(daiTokens);
 
         // transfer the sum of the newly minted cDAI with the original _amount
-        require(cDai.transferFrom(address(this), msg.sender, cDAItokens.add(_amount)));
+        require(cDai.transfer(msg.sender, cDAItokens.add(_amount)));
         emit WithdrawForAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
     }
@@ -230,7 +230,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         uint256 daiTokens = _uniswapBuyDai(_amount);
 
         //transfer DAI to msg.sender
-        require(dai.transferFrom(address(this), msg.sender, daiTokens.add(daiRedeemed)));
+        require(dai.transfer(msg.sender, daiTokens.add(daiRedeemed)));
 
         emit WithdrawForUnderlyingAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
