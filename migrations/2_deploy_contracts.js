@@ -2,12 +2,16 @@ const SaveDAI = artifacts.require("SaveDAI");
 
 module.exports = function (deployer) {
   deployer.then(async () => {
+    let uniswapFactoryAddr;
+    let cDaiAddr;
+    let ocDaiAddr;
+    let daiAddr;
     if ((await web3.eth.net.getId()) == 4) {
       // Rinkeby
       uniswapFactoryAddr = "0xf5D915570BC477f9B8D6C0E980aA81757A3AaC36";
       cDaiAddr = "0x6d7f0754ffeb405d23c51ce938289d4835be3b14";
       ocDaiAddr = "0x57cC8708eFEB7f7D42E4d73ab9120BC275f1DB59";
-      daiAddr = "0x95b58a6bff3d14b7db2f5cb5f0ad413dc2940658";
+      daiAddr = "0x5592EC0cfb4dbc12D3aB100b257153436a1f0FEa";
     } else if ((await web3.eth.net.getId()) == 42) {
       // Kovan
       uniswapFactoryAddr = "0xD3E51Ef092B2845f10401a0159B2B96e8B6c3D30";
