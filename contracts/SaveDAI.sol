@@ -22,7 +22,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     uint256 constant LARGE_BLOCK_SIZE = 1099511627776;
 
     // Variable used to set near infinite approval allowances
-    uint256 constant LARGE_APPROVAL_NUMBER = 10**30;
+    uint256 constant LARGE_APPROVAL_NUMBER = uint256(-1);
 
     // interfaces
     UniswapFactoryInterface public uniswapFactory;
