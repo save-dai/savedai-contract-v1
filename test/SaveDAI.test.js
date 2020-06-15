@@ -27,7 +27,7 @@ const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
-const userWallet = '0x274d9e726844ab52e351e8f1272e7fc3f58b7e5f';
+const userWallet = '0x897607ab556177b0e0938541073ac1e01c55e483';
 
 contract('SaveDAI', function (accounts) {
   // amount of ocDAI, cDAI, saveDAI we want to mint
@@ -76,7 +76,7 @@ contract('SaveDAI', function (accounts) {
     expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
   describe('mint', async function () {
-    it('should revert if paused', async function () {
+    it.skip('should revert if paused', async function () {
       await savedaiInstance.pause({ from: owner });
       // mint saveDAI tokens
       await expectRevert(helpers.mint(amount, { from: userWallet }), 'Pausable: paused');
