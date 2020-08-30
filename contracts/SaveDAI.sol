@@ -52,7 +52,8 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable {
         address cDaiAddress,
         address ocDaiAddress,
         address daiAddress
-    ) ERC20("saveDAI_20210210", "saveDAI")
+    ) 
+    ERC20("saveDAI_20210210", "saveDAI")
         public
     {
         cDai = CTokenInterface(cDaiAddress);
@@ -83,7 +84,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable {
     }
 
     /**
-    * @notice Used to override name() in ERC20Detailed if updateTokenName has been called
+    * @notice Used to override name() in ERC20 if updateTokenName has been called
     * @return Returns the new token name
     */
     function name()
