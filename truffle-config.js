@@ -52,4 +52,15 @@ module.exports = {
       gasPrice: 7000000000,  // 7 gwei (in wei) (default: 100 gwei)
     },
   },
+
+  // Configure your compilers
+  compilers: {
+    solc: {
+      version: '^0.6.0',
+      optimizer: {
+        enabled: false,
+        runs: 200,
+      },
+    },
+  },
 };

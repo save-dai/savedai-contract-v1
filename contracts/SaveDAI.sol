@@ -1,18 +1,19 @@
+// SPDX-License-Identifier: MIT
 
-pragma solidity ^0.5.0;
+pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/lifecycle/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "rewards-farmer/contracts/FarmerFactory.sol";
 import "./lib/UniswapExchangeInterface.sol";
 import "./lib/UniswapFactoryInterface.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 import "./lib/ISaveDAI.sol";
 
-contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
+contract SaveDAI is ISaveDAI, ERC20, Pausable {
     using SafeMath for uint256;
 
     /***************
@@ -51,7 +52,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         address cDaiAddress,
         address ocDaiAddress,
         address daiAddress
-    ) ERC20Detailed("saveDAI_20210210", "saveDAI", 8)
+    ) ERC20("saveDAI_20210210", "saveDAI")
         public
     {
         cDai = CTokenInterface(cDaiAddress);
@@ -88,6 +89,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     function name()
         public
         view
+        override
         returns (string memory)
     {
         if (bytes(_name).length == 0) {
@@ -105,6 +107,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     */
     function mint(uint256 _amount)
         external
+        override
         whenNotPaused
         returns (bool)
     {
@@ -146,6 +149,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         uint256 _amount,
         address payable[] calldata vaultsToExerciseFrom)
         external
+        override
     {
         // approve ocDai contract to spend both ocDai and cDai
         require(ocDai.approve(address(ocDai), _amount));
@@ -158,10 +162,11 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
 
         uint256 balanceAfter = saveDai.balance;
         uint256 EthReturned = balanceAfter.sub(balanceBefore);
-        address(msg.sender).transfer(EthReturned);
-        super._burn(msg.sender, _amount);
+        address payable caller = msg.sender;
+        caller.transfer(EthReturned);
+        super._burn(caller, _amount);
 
-        emit ExerciseInsurance(_amount, EthReturned, msg.sender);
+        emit ExerciseInsurance(_amount, EthReturned, caller);
     }
 
     /**
@@ -170,6 +175,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     */
     function withdrawForAssetandOTokens(uint256 _amount)
         external
+        override
     {
         if (!ocDai.hasExpired()) {
             // transfer _amount of ocDAI to msg.sender
@@ -190,6 +196,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     */
     function withdrawForAsset(uint256 _amount)
         external
+        override
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
         // swap _amount of ocDAI on Uniswap for DAI
@@ -210,6 +217,7 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     */
     function withdrawForUnderlyingAsset(uint256 _amount)
         external
+        override
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
 
@@ -256,7 +264,11 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
     * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
     * @return The value in DAI
     */
-    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) external returns (uint256) {
+    function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) 
+        external
+        override 
+        returns (uint256) 
+    {
         uint256 oTokenCost = getCostOfOToken(_saveDaiAmount);
         return _getCostofAsset(_saveDaiAmount).add(oTokenCost);
     }
@@ -328,5 +340,5 @@ contract SaveDAI is ISaveDAI, ERC20, ERC20Detailed, Pausable {
         return updatedBalance.sub(initialBalance);
     }
 
-    function() external payable {}
+    receive() external payable {}
 }
