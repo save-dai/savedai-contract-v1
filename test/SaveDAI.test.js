@@ -21,6 +21,7 @@ const OTokenInterface = artifacts.require('OTokenInterface');
 const ERC20 = artifacts.require('ERC20');
 const UniswapFactoryInterface = artifacts.require('UniswapFactoryInterface');
 const UniswapExchangeInterface = artifacts.require('UniswapExchangeInterface');
+const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 // mainnet addresses
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
@@ -38,7 +39,7 @@ contract('SaveDAI', function (accounts) {
   // Number of seconds to increase to ensure February 21st, 2021 has elapsed
   increaseTime = 26409094;
 
-  beforeEach(async function () {
+  beforeEach(async () => {
     savedai = await SaveDAI.new(
       uniswapFactoryAddress,
       cDaiAddress,
@@ -61,7 +62,7 @@ contract('SaveDAI', function (accounts) {
 
     // Send 0.1 eth to userAddress to have gas to send an ERC20 tx.
     await web3.eth.sendTransaction({
-      from: accounts[0],
+      from: owner,
       to: userWallet,
       value: ether('1'),
     });
@@ -75,13 +76,21 @@ contract('SaveDAI', function (accounts) {
     const ethBalance = await balance.current(userWallet);
     expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
-  describe('mint', async function () {
-    it('should revert if paused', async function () {
+  describe('constructor', async () => {
+    it('should set decimals to 8', async () => {
+      assert.equal(await savedaiInstance.decimals(), 8);
+    });
+    it('should set the admin role', async () => {
+      assert.isTrue(await savedaiInstance.hasRole(DEFAULT_ADMIN_ROLE, owner));
+    });
+  });
+  describe('mint', async () => {
+    it('should revert if paused', async () => {
       await savedaiInstance.pause({ from: owner });
       // mint saveDAI tokens
       await expectRevert(helpers.mint(amount, { from: userWallet }), 'Pausable: paused');
     });
-    it('should mint saveDAI tokens', async function () {
+    it('should mint saveDAI tokens', async () => {
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
@@ -107,7 +116,7 @@ contract('SaveDAI', function (accounts) {
       assert.equal(ocDAIbalance.toString(), amount);
       assert.equal(saveDaiMinted.toString(), amount);
     });
-    it('should decrease userWallet DAI balance', async function () {
+    it('should decrease userWallet DAI balance', async () => {
       const initialBalance = await daiInstance.balanceOf(userWallet);
 
       // Calculate how much DAI is needed to approve
@@ -132,7 +141,7 @@ contract('SaveDAI', function (accounts) {
 
       assert.equal(daiTotalTransfer.toString().substring(0, 10), diff.toString().substring(0, 10));
     });
-    it('should emit the amount of tokens minted', async function () {
+    it('should emit the amount of tokens minted', async () => {
       // calculate amount needed for approval
       const daiNeededForPremium = await savedaiInstance.getCostOfOToken(amount);
       const dai = ether(amount);
@@ -143,7 +152,7 @@ contract('SaveDAI', function (accounts) {
       const { logs } = await savedaiInstance.mint(amount, { from: userWallet });
       expectEvent.inLogs(logs, 'Mint');
     });
-    it('should return true', async function () {
+    it('should return true', async () => {
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
@@ -163,7 +172,7 @@ contract('SaveDAI', function (accounts) {
     });
   });
   describe('getCostOfOToken', function () {
-    it('should return premium to pay for ocDAI tokens', async function () {
+    it('should return premium to pay for ocDAI tokens', async () => {
       const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
       // use exchange directly
@@ -174,20 +183,20 @@ contract('SaveDAI', function (accounts) {
     });
   });
   describe('pause', function () {
-    it('should revert if not called by admin', async function () {
+    it('should revert if not called by admin', async () => {
       await expectRevert(savedaiInstance.pause({ from: notOwner }), 'Caller must be admin');
     });
-    it('should pause the contract', async function () {
+    it('should pause the contract', async () => {
       assert.isFalse(await savedaiInstance.paused());
       await savedaiInstance.pause({ from: owner });
       assert.isTrue(await savedaiInstance.paused());
     });
   });
   describe('unpause', function () {
-    it('should revert if not called by admin', async function () {
+    it('should revert if not called by admin', async () => {
       await expectRevert(savedaiInstance.unpause({ from: notOwner }), 'Caller must be admin');
     });
-    it('should unpause the contract', async function () {
+    it('should unpause the contract', async () => {
       await savedaiInstance.pause({ from: owner });
       assert.isTrue(await savedaiInstance.paused());
       await savedaiInstance.unpause({ from: owner });
@@ -195,7 +204,7 @@ contract('SaveDAI', function (accounts) {
     });
   });
   describe('saveDaiPriceInDaiCurrent', function () {
-    it('should first identify the cost of ocDai', async function () {
+    it('should first identify the cost of ocDai', async () => {
       let premium = await savedaiInstance.getCostOfOToken(amount);
       premium = new BN(premium);
 
@@ -204,7 +213,7 @@ contract('SaveDAI', function (accounts) {
 
       assert.equal(premium.toString(), daiAmount.toString());
     });
-    it('should then identify the cost of cDai using _getCostOfcDAI', async function () {
+    it('should then identify the cost of cDai using _getCostOfcDAI', async () => {
       amount -= 1; // account for rounding issue
       const saveDaiPrice = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount) / 1e18;
 
@@ -217,7 +226,7 @@ contract('SaveDAI', function (accounts) {
 
       assert.approximately(cDaiCostFromSaveDAIprice, cDaiCostFromExchangeRate.toString() / 1e18, 0.0001);
     });
-    it('should return the value in DAI for a given amount of saveDAI', async function () {
+    it('should return the value in DAI for a given amount of saveDAI', async () => {
       let transaction = await savedaiInstance.saveDaiPriceInDaiCurrent.call(amount);
       transaction = new BN(transaction);
 
@@ -234,14 +243,14 @@ contract('SaveDAI', function (accounts) {
     });
   });
   context('when ocDAI has NOT expired', function () {
-    beforeEach(async function () {
+    beforeEach(async () => {
       // Mint SaveDAI tokens
       await helpers.mint(amount);
       saveDai = await savedaiInstance.balanceOf(userWallet);
       saveDai = saveDai.toNumber();
     });
     describe('withdrawForAssetandOTokens', function () {
-      it('should transfer _amount of ocDAI to msg.sender', async function () {
+      it('should transfer _amount of ocDAI to msg.sender', async () => {
         // Idenitfy the user's initial ocDAI balance
         const initialBalance = await ocDaiInstance.balanceOf(userWallet);
 
@@ -257,7 +266,7 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, saveDai);
       });
-      it('should transfer _amount of cDAI to msg.sender', async function () {
+      it('should transfer _amount of cDAI to msg.sender', async () => {
         // Idenitfy the user's initial cDAI balance
         const initialBalance = await cDaiInstance.balanceOf(userWallet);
 
@@ -273,7 +282,7 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, saveDai);
       });
-      it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and their _amount of insurance removed', async function () {
+      it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and their _amount of insurance removed', async () => {
         // Remove _amount of userWallelt's insurance
         const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
         // assert WithdrawForAssetandOTokens fires
@@ -288,7 +297,7 @@ contract('SaveDAI', function (accounts) {
         const insuranceRemovedAmount = await transaction.logs[3].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
-      it('should burn _amount of msg.sender\'s saveDAI tokens', async function () {
+      it('should burn _amount of msg.sender\'s saveDAI tokens', async () => {
         // Idenitfy the user's initial saveDAI balance
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
@@ -306,7 +315,7 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('withdrawForAsset', function () {
-      it('should transfer cDAI from saveDAI contract to user', async function () {
+      it('should transfer cDAI from saveDAI contract to user', async () => {
         // Identify initial cDAI balances
         const initialcDaiBalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
         const initialcDAIbalanceUser = await cDaiInstance.balanceOf(userWallet);
@@ -338,7 +347,7 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diffInContract.toString().substring(0, 7), diffInUser.toString().substring(0, 7));
       });
-      it('should emit a WithdrawForAsset event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+      it('should emit a WithdrawForAsset event with the msg.sender\'s address and their total balance of insurance removed', async () => {
         const transaction = await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
         // assert WithdrawForAsset fires
         const event = await transaction.logs[8].event;
@@ -352,7 +361,7 @@ contract('SaveDAI', function (accounts) {
         const insuranceRemovedAmount = await transaction.logs[8].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
-      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
+      it('should burn the amount of msg.sender\'s saveDAI tokens', async () => {
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
         // Remove userWallelt's insurance
@@ -370,7 +379,7 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('withdrawForUnderlyingAsset', function () {
-      it('should decrease saveDAI contract by cDAI and ocDAI', async function () {
+      it('should decrease saveDAI contract by cDAI and ocDAI', async () => {
         // Identify initial balances
         const initialcDaiBalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
         const initialocDaiBalanceContract = await ocDaiInstance.balanceOf(savedaiAddress);
@@ -389,7 +398,7 @@ contract('SaveDAI', function (accounts) {
         assert.equal(diffIncDai.toString(), saveDai);
         assert.equal(diffInocDai.toString(), saveDai);
       });
-      it('should send msg.sender the newly minted DAI', async function () {
+      it('should send msg.sender the newly minted DAI', async () => {
         // Idenitfy the user's initialDaiBalance
         initialDaiBalance = await daiInstance.balanceOf(userWallet);
 
@@ -418,7 +427,7 @@ contract('SaveDAI', function (accounts) {
 
         assert.approximately(daiBoughtTotal, diff, 0.000000019);
       });
-      it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and their total balance of insurance removed', async function () {
+      it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and their total balance of insurance removed', async () => {
         const transaction = await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // assert WithdrawForUnderlyingAsset fires
@@ -433,7 +442,7 @@ contract('SaveDAI', function (accounts) {
         const insuranceRemovedAmount = await transaction.logs[8].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
-      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
+      it('should burn the amount of msg.sender\'s saveDAI tokens', async () => {
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
         // Remove userWallelt's insurance
@@ -451,7 +460,7 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('exerciseInsurance', function () {
-      it('should be able to call exercise using one vault', async function () {
+      it('should be able to call exercise using one vault', async () => {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
 
@@ -492,7 +501,7 @@ contract('SaveDAI', function (accounts) {
         assert.equal(initialocDAIbalance.sub(endingocDAIbalance).toString(), amtToExercise.toString());
         assert.equal(initialcDAIbalance.sub(endingcDAIbalance).toString(), amtToExercise.toString());
       });
-      it('should be able to call exercise using multiple vaults', async function () {
+      it('should be able to call exercise using multiple vaults', async () => {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0xd89b6d5228672ec03ab5929d625e373b4f1f25f3', '0xcae687969d3a6c4649d114b1c768d5b1deae547b'];
 
@@ -533,7 +542,7 @@ contract('SaveDAI', function (accounts) {
         assert.equal(initialocDAIbalance.sub(endingocDAIbalance).toString(), amtToExercise.toString());
         assert.equal(initialcDAIbalance.sub(endingcDAIbalance).toString(), amtToExercise.toString());
       });
-      it('should emit the amount of insurance to exercise', async function () {
+      it('should emit the amount of insurance to exercise', async () => {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
 
@@ -550,14 +559,14 @@ contract('SaveDAI', function (accounts) {
   });
 
   context('when ocDAI has expired', function () {
-    beforeEach(async function () {
+    beforeEach(async () => {
       // Mint SaveDAI tokens
       await helpers.mint(amount);
       saveDai = await savedaiInstance.balanceOf(userWallet);
       saveDai = saveDai.toNumber();
     });
     describe('withdrawForAssetandOTokens', function () {
-      it('should transfer _amount of cDAI to msg.sender', async function () {
+      it('should transfer _amount of cDAI to msg.sender', async () => {
         // Increase time so ocDAI has expired
         await time.increase(increaseTime);
 
@@ -576,7 +585,7 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(diff, saveDai);
       });
-      it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and the amount of insurance removed', async function () {
+      it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and the amount of insurance removed', async () => {
         // Remove userWallelt's insurance
         // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
         const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
@@ -594,7 +603,7 @@ contract('SaveDAI', function (accounts) {
 
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
-      it('should burn the amount of msg.sender\'s saveDAI tokens', async function () {
+      it('should burn the amount of msg.sender\'s saveDAI tokens', async () => {
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
         // Remove userWallelt's insurance
@@ -612,7 +621,7 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('withdrawForAsset', function () {
-      it('should revert if ocDAI has expired', async function () {
+      it('should revert if ocDAI has expired', async () => {
         // Mint SaveDAI tokens
         await helpers.mint(amount);
         saveDai = await savedaiInstance.balanceOf(userWallet);
@@ -622,7 +631,7 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('withdrawForUnderlyingAsset', function () {
-      it('should revert if ocDAI has expired', async function () {
+      it('should revert if ocDAI has expired', async () => {
         // Mint SaveDAI tokens
         await helpers.mint(amount);
         saveDai = await savedaiInstance.balanceOf(userWallet);
@@ -632,7 +641,7 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('exerciseInsurance', function () {
-      it('should revert', async function () {
+      it('should revert', async () => {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
 

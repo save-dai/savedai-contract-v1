@@ -60,6 +60,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
         daiUniswapExchange = _getExchange(daiAddress);
         ocDaiExchange = _getExchange(ocDaiAddress);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupDecimals(8);
 
         require(
             dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER) &&
