@@ -33,15 +33,11 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable {
     OTokenInterface public ocDai;
     IERC20 public dai;
 
-    // Will override the private _name variable in ERC20Detailed if token _name is updated
-    string private _name;
-
     /***************
     EVENTS
     ***************/
     event Mint(uint256 _amount, address _recipient);
     event ExerciseInsurance(uint256 _amount, uint256 _EthReturned, address _user);
-    event UpdateTokenName(string _newName);
     event ExchangeRate(uint256 _exchangeRateCurrent);
     event WithdrawForAssetandOTokens(address _user, uint256 _amount);
     event WithdrawForAsset(address _user, uint256 _amount);
@@ -67,38 +63,6 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable {
             dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER) &&
             dai.approve(address(cDai), LARGE_APPROVAL_NUMBER)
         );
-    }
-
-    /**
-    * @notice Will update the token name
-    * @return Returns the new token name
-    */
-    function updateTokenName()
-        public
-        returns (string memory)
-    {
-        require(ocDai.hasExpired(), "Token must have expired");
-        _name = string(abi.encodePacked(name(), '_expired'));
-        emit UpdateTokenName(name());
-        return _name;
-    }
-
-    /**
-    * @notice Used to override name() in ERC20 if updateTokenName has been called
-    * @return Returns the new token name
-    */
-    function name()
-        public
-        view
-        override
-        returns (string memory)
-    {
-        if (bytes(_name).length == 0) {
-            return super.name();
-        }
-        else {
-            return _name;
-        }
     }
 
     /**

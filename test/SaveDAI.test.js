@@ -212,12 +212,6 @@ contract('SaveDAI', function (accounts) {
       assert.equal(amountOfDAI.toString(), transaction.toString());
     });
   });
-  describe('name', function () {
-    it('should return the inital token name if updateTokenName has not been called', async function () {
-      initialTokenName = await savedaiInstance.name();
-      assert.equal(initialTokenName, 'saveDAI_20210210');
-    });
-  });
   context('when ocDAI has NOT expired', function () {
     beforeEach(async function () {
       // Mint SaveDAI tokens
@@ -532,11 +526,6 @@ contract('SaveDAI', function (accounts) {
         expectEvent(txReceipt, 'ExerciseInsurance');
       });
     });
-    describe('updateTokenName', function () {
-      it('should revert', async function () {
-        await expectRevert(savedaiInstance.updateTokenName(), 'Token must have expired');
-      });
-    });
   });
 
   context('when ocDAI has expired', function () {
@@ -636,22 +625,5 @@ contract('SaveDAI', function (accounts) {
         );
       });
     });
-
-    describe('updateTokenName', function () {
-      it('should return the new name', async function () {
-        const newName = await savedaiInstance.updateTokenName.call();
-        assert.equal(newName, 'saveDAI_20210210_expired');
-      });
-      it('should set new name', async function () {
-        await savedaiInstance.updateTokenName();
-        const newName = await savedaiInstance.name();
-        assert.equal(newName, 'saveDAI_20210210_expired');
-      });
-      it('should emit both the new token name', async function () {
-        const { logs } = await savedaiInstance.updateTokenName();
-        expectEvent.inLogs(logs, 'UpdateTokenName');
-      });
-    });
   });
-
 });
