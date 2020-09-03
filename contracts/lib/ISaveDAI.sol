@@ -9,4 +9,6 @@ interface ISaveDAI {
     function withdrawForAsset(uint256 _amount) external;
     function withdrawForUnderlyingAsset(uint256 _amount) external;
     function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) external returns (uint256);
+    function pause() external;
+    function unpause() external;
 }

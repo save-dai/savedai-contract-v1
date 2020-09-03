@@ -4,6 +4,7 @@ pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "rewards-farmer/contracts/FarmerFactory.sol";
@@ -13,7 +14,7 @@ import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 import "./lib/ISaveDAI.sol";
 
-contract SaveDAI is ISaveDAI, ERC20, Pausable {
+contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
     using SafeMath for uint256;
 
     /***************
@@ -58,6 +59,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable {
         uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
         daiUniswapExchange = _getExchange(daiAddress);
         ocDaiExchange = _getExchange(ocDaiAddress);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         require(
             dai.approve(address(daiUniswapExchange), LARGE_APPROVAL_NUMBER) &&
@@ -236,6 +238,24 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable {
     {
         uint256 oTokenCost = getCostOfOToken(_saveDaiAmount);
         return _getCostofAsset(_saveDaiAmount).add(oTokenCost);
+    }
+
+    /**
+     * @notice Allows admin to pause contract
+     */
+    function pause() external override {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "Caller must be admin");
+        _pause();
+    }
+
+    /**
+     * @notice Allows admin to unpause contract
+     */
+    function unpause() external override {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "Caller must be admin");
+        _unpause();
     }
 
     /*

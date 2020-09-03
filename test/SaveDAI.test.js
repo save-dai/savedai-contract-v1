@@ -76,7 +76,7 @@ contract('SaveDAI', function (accounts) {
     expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
   describe('mint', async function () {
-    it.skip('should revert if paused', async function () {
+    it('should revert if paused', async function () {
       await savedaiInstance.pause({ from: owner });
       // mint saveDAI tokens
       await expectRevert(helpers.mint(amount, { from: userWallet }), 'Pausable: paused');
@@ -171,6 +171,27 @@ contract('SaveDAI', function (accounts) {
       const premiumShouldBe = await daiExchange.getTokenToEthOutputPrice.call(ethToPay);
 
       assert.equal(premium.toString(), premiumShouldBe.toString());
+    });
+  });
+  describe('pause', function () {
+    it('should revert if not called by admin', async function () {
+      await expectRevert(savedaiInstance.pause({ from: notOwner }), 'Caller must be admin');
+    });
+    it('should pause the contract', async function () {
+      assert.isFalse(await savedaiInstance.paused());
+      await savedaiInstance.pause({ from: owner });
+      assert.isTrue(await savedaiInstance.paused());
+    });
+  });
+  describe('unpause', function () {
+    it('should revert if not called by admin', async function () {
+      await expectRevert(savedaiInstance.unpause({ from: notOwner }), 'Caller must be admin');
+    });
+    it('should unpause the contract', async function () {
+      await savedaiInstance.pause({ from: owner });
+      assert.isTrue(await savedaiInstance.paused());
+      await savedaiInstance.unpause({ from: owner });
+      assert.isFalse(await savedaiInstance.paused());
     });
   });
   describe('saveDaiPriceInDaiCurrent', function () {
