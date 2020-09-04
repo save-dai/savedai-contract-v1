@@ -16,6 +16,7 @@ const {
 } = require('@openzeppelin/test-helpers');
 
 const SaveDAI = artifacts.require('SaveDAI');
+const SaveTokenFarmer = artifacts.require('SaveTokenFarmer');
 const CTokenInterface = artifacts.require('CTokenInterface');
 const OTokenInterface = artifacts.require('OTokenInterface');
 const ERC20 = artifacts.require('ERC20');
@@ -40,11 +41,16 @@ contract('SaveDAI', function (accounts) {
   increaseTime = 26409094;
 
   beforeEach(async () => {
+    // deploys the farmer's logic contract
+    saveTokenFarmer = await SaveTokenFarmer.new();
+    saveTokenFarmerAddress = saveTokenFarmer.address;
+
     savedai = await SaveDAI.new(
       uniswapFactoryAddress,
       cDaiAddress,
       ocDaiAddress,
       daiAddress,
+      saveTokenFarmerAddress,
     );
     savedaiAddress = savedai.address;
     savedaiInstance = await SaveDAI.at(savedaiAddress);

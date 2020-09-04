@@ -1,4 +1,7 @@
 const SaveDAI = artifacts.require("SaveDAI");
+const helpers = require("../test/helpers/helpers.js");
+
+const SaveTokenFarmer = artifacts.require('SaveTokenFarmer');
 
 module.exports = function (deployer) {
   deployer.then(async () => {
@@ -32,9 +35,18 @@ module.exports = function (deployer) {
       daiAddr = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
     }
 
+    // deploys the farmer's logic contract
+    async function deployFarmer () {
+      saveTokenFarmer = await SaveTokenFarmer.new();
+      return saveTokenFarmer.address;
+    }
+
+    // deploys the farmer's logic contract
+    const saveTokenFarmerAddress = await deployFarmer();
+
     // For all testnets / mainnets
     const saveDAI = await deployer.deploy(
-      SaveDAI, uniswapFactoryAddr, cDaiAddr, ocDaiAddr, daiAddr
+      SaveDAI, uniswapFactoryAddr, cDaiAddr, ocDaiAddr, daiAddr, saveTokenFarmerAddress
     );
     console.log("SaveDAI ", saveDAI.address.toString());
   })

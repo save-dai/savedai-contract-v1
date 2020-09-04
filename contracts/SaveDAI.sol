@@ -14,7 +14,7 @@ import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 import "./lib/ISaveDAI.sol";
 
-contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
+contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
     using SafeMath for uint256;
 
     /***************
@@ -51,9 +51,11 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
         address uniswapFactoryAddress,
         address cDaiAddress,
         address ocDaiAddress,
-        address daiAddress
+        address daiAddress,
+        address farmerAddress
     ) 
-    ERC20("saveDAI_20210210", "saveDAI")
+        ERC20("saveDAI_20210210", "saveDAI")
+        FarmerFactory(farmerAddress)
         public
     {
         cDai = CTokenInterface(cDaiAddress);
