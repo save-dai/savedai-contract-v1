@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "rewards-farmer/contracts/FarmerFactory.sol";
 import "./lib/UniswapExchangeInterface.sol";
 import "./lib/UniswapFactoryInterface.sol";
+import "./lib/ISaveTokenFarmer.sol";
 import "./lib/CTokenInterface.sol";
 import "./lib/OTokenInterface.sol";
 import "./lib/ISaveDAI.sol";
@@ -84,6 +85,19 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         whenNotPaused
         returns (bool)
     {
+        address proxy;
+
+        // if msg.sender does not have a proxy, deploy proxy
+        if (farmerProxy[msg.sender] == address(0)) {
+            proxy = deployProxy(
+                msg.sender,
+                address(cDai),
+                address(dai),
+                compToken);
+        } else {
+            proxy = farmerProxy[msg.sender];
+        }
+
         // calculate DAI needed to mint _amount of cDAI and mint tokens
         uint256 assetCost = _getCostofAsset(_amount);
 
@@ -94,12 +108,14 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         require(
             dai.transferFrom(
                 msg.sender,
-                address(this),
+                proxy,
                 (assetCost.add(oTokenCost))
             )
         );
 
-        uint256 assetAmount = _mintCDai(assetCost);
+        // mint the interest bearing token
+        uint256 assetAmount = ISaveTokenFarmer(proxy).mint();
+
         uint256 oTokenAmount = _uniswapBuyOCDai(oTokenCost);
 
         require(assetAmount == _amount, "cDAI minted must equal _amount");
@@ -172,14 +188,23 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         override
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
+        require(farmerProxy[msg.sender] != address(0), "The user must have a farmer address");
+
         // swap _amount of ocDAI on Uniswap for DAI
         uint256 daiTokens = _uniswapBuyDai(_amount);
 
         // mint cDAI
-        uint256 cDAItokens = _mintCDai(daiTokens);
+        uint256 cDAItokens = cDai.mint(daiTokens);
 
-        // transfer the sum of the newly minted cDAI with the original _amount
+        // get the proxy address to transfer cDAI
+        address proxy = farmerProxy[msg.sender];
+
+        // transfer cDAI from SaveTokenFarmer
+        require(ISaveTokenFarmer(proxy).transfer(address(this), _amount));
+        
+        // transfer sum of newly minted cDAI with the original _amount in the SaveTokenFarmer
         require(cDai.transfer(msg.sender, cDAItokens.add(_amount)));
+        
         emit WithdrawForAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
     }
@@ -314,21 +339,6 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
             uniswapFactory.getExchange(address(_tokenAddress))
         );
         return exchange;
-    }
-
-    /**
-    * @notice This function mints cDAI tokens
-    * @param _amount The amount of DAI tokens transferred to Compound
-    */
-    function _mintCDai(uint256 _amount) internal returns (uint256) {
-        // identify the current balance of the saveDAI contract
-        uint256 initialBalance = cDai.balanceOf(address(this));
-        // mint cDai
-        cDai.mint(_amount);
-        // identify the updated balance of the saveDAI contract
-        uint256 updatedBalance = cDai.balanceOf(address(this));
-        // return number of cDAI tokens minted
-        return updatedBalance.sub(initialBalance);
     }
 
     receive() external payable {}
