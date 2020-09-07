@@ -66,7 +66,7 @@ contract('SaveDAI', function (accounts) {
     const daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
     daiExchange = await UniswapExchangeInterface.at(daiExchangeAddress);
 
-    // Send 0.1 eth to userAddress to have gas to send an ERC20 tx.
+    // Send eth to userAddress to have gas to send an ERC20 tx.
     await web3.eth.sendTransaction({
       from: owner,
       to: userWallet,

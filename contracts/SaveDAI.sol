@@ -53,6 +53,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         address cDaiAddress,
         address ocDaiAddress,
         address daiAddress,
+        address compTokenAddress,
         address farmerAddress
     ) 
         ERC20("saveDAI_20210210", "saveDAI")
@@ -62,6 +63,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         cDai = CTokenInterface(cDaiAddress);
         ocDai = OTokenInterface(ocDaiAddress);
         dai = IERC20(daiAddress);
+        compToken = compTokenAddress;
         uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
         daiUniswapExchange = _getExchange(daiAddress);
         ocDaiExchange = _getExchange(ocDaiAddress);
@@ -108,15 +110,19 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         require(
             dai.transferFrom(
                 msg.sender,
-                proxy,
+                address(this),
                 (assetCost.add(oTokenCost))
             )
         );
 
+        // mint the insurance token
+        uint256 oTokenAmount = _uniswapBuyOCDai(oTokenCost);
+
+        // transfer DAI to the user's SaveTokenFarmer to mint cDAI
+        require(dai.transfer(proxy, assetCost));
+
         // mint the interest bearing token
         uint256 assetAmount = ISaveTokenFarmer(proxy).mint();
-
-        uint256 oTokenAmount = _uniswapBuyOCDai(oTokenCost);
 
         require(assetAmount == _amount, "cDAI minted must equal _amount");
         require(oTokenAmount == _amount, "oTokens purchased must equal _amount");
