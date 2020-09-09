@@ -22,7 +22,7 @@
   "homepage": "https://savedai.xyz",
   "dependencies": {
     "@openzeppelin/contracts": "^3.1.0",
-    "rewards-farmer": "^1.0.1-alpha",
+    "rewards-farmer": "^1.0.2-alpha",
     "truffle-hdwallet-provider": "^1.0.17"
   },
   "devDependencies": {

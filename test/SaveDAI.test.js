@@ -21,7 +21,7 @@ const OTokenInterface = artifacts.require('OTokenInterface');
 const ERC20 = artifacts.require('ERC20');
 const UniswapFactoryInterface = artifacts.require('UniswapFactoryInterface');
 const UniswapExchangeInterface = artifacts.require('UniswapExchangeInterface');
-const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const Pauser = '0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d862a';
 
 // mainnet addresses
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
@@ -80,8 +80,8 @@ contract('SaveDAI', function (accounts) {
     it('should set decimals to 8', async () => {
       assert.equal(await savedaiInstance.decimals(), 8);
     });
-    it('should set the admin role', async () => {
-      assert.isTrue(await savedaiInstance.hasRole(DEFAULT_ADMIN_ROLE, owner));
+    it('should set the Pauser role', async () => {
+      assert.isTrue(await savedaiInstance.hasRole(Pauser, owner));
     });
   });
   describe('mint', async () => {

@@ -26,6 +26,9 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
     // Variable used to set near infinite approval allowances
     uint256 constant LARGE_APPROVAL_NUMBER = uint256(-1);
 
+    // Variable for pauser
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
     // interfaces
     UniswapFactoryInterface public uniswapFactory;
     UniswapExchangeInterface public daiUniswapExchange;
@@ -59,7 +62,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
         uniswapFactory = UniswapFactoryInterface(uniswapFactoryAddress);
         daiUniswapExchange = _getExchange(daiAddress);
         ocDaiExchange = _getExchange(ocDaiAddress);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(PAUSER_ROLE, msg.sender);
         _setupDecimals(8);
 
         require(
@@ -245,7 +248,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
      * @notice Allows admin to pause contract
      */
     function pause() external override {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+        require(hasRole(PAUSER_ROLE, msg.sender),
             "Caller must be admin");
         _pause();
     }
@@ -254,7 +257,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl {
      * @notice Allows admin to unpause contract
      */
     function unpause() external override {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+        require(hasRole(PAUSER_ROLE, msg.sender),
             "Caller must be admin");
         _unpause();
     }
