@@ -28,6 +28,7 @@ const Pauser = '0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d86
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
+const compAddress = '0x897607ab556177b0e0938541073ac1e01c55e483';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const userWallet = '0x897607ab556177b0e0938541073ac1e01c55e483';
 
@@ -50,6 +51,7 @@ contract('SaveDAI', function (accounts) {
       cDaiAddress,
       ocDaiAddress,
       daiAddress,
+      compAddress,
       saveTokenFarmerAddress,
     );
     savedaiAddress = savedai.address;
@@ -113,8 +115,10 @@ contract('SaveDAI', function (accounts) {
       // mint saveDAI tokens
       await savedaiInstance.mint(amount, { from: userWallet });
 
+      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+
       const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-      const cDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
+      const cDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
       const saveDaiMinted = await savedaiInstance.balanceOf(userWallet);
 
       // all token balances should match
@@ -128,24 +132,26 @@ contract('SaveDAI', function (accounts) {
       // Calculate how much DAI is needed to approve
       const premium = await savedaiInstance.getCostOfOToken.call(amount);
 
-      await daiInstance.approve(savedaiAddress, initialBalance, { from: userWallet });
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      exchangeRate = (exchangeRate.toString()) / 1e18;
+      let amountInDAI = amount * exchangeRate;
+      amountInDAI = new BN(amountInDAI.toString());
+
+      let totalTransfer = premium.add(amountInDAI);
+      largerAmount = totalTransfer.add(new BN(ether('0.1')));
+
+      await daiInstance.approve(savedaiAddress, largerAmount, { from: userWallet });
 
       // mint saveDAI tokens
-      const transaction = await savedaiInstance.mint(amount, { from: userWallet });
-      let exchangeRateTransaction = await transaction.logs[0].args._exchangeRateCurrent;
-      exchangeRateTransaction = new BN(exchangeRateTransaction.toString()) / 1e18;
-
-      // calculate how much DAI is spent using value from ExchangeRate event
-      let daiFromExchangeRateEvent = exchangeRateTransaction * amount;
-      daiFromExchangeRateEvent = new BN(daiFromExchangeRateEvent.toString());
-
-      const daiTotalTransfer = premium.add(daiFromExchangeRateEvent) / 1e18;
+      await savedaiInstance.mint(amount, { from: userWallet });
 
       const endingBalance = await daiInstance.balanceOf(userWallet);
 
       const diff = initialBalance.sub(endingBalance) / 1e18;
 
-      assert.equal(daiTotalTransfer.toString().substring(0, 10), diff.toString().substring(0, 10));
+      totalTransfer = totalTransfer / 1e18;
+
+      assert.equal(totalTransfer.toString().substring(0, 8), diff.toString().substring(0, 8));
     });
     it('should emit the amount of tokens minted', async () => {
       // calculate amount needed for approval

@@ -177,8 +177,14 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
             require(ocDai.transfer(msg.sender, _amount));
         }
 
-        // transfer _amount of cDAI to msg.sender
-        require(cDai.transfer(msg.sender, _amount));
+        require(farmerProxy[msg.sender] != address(0),
+            "The user farmer proxy must exist");
+
+        // get user's SaveTokenFarmer address
+        address proxy = farmerProxy[msg.sender];
+
+        // transfer the interest bearing cDAI to msg.sender
+        require(ISaveTokenFarmer(proxy).transfer(msg.sender, _amount));
 
         // burn _amount of saveDAI tokens
         _burn(msg.sender, _amount);

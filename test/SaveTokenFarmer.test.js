@@ -5,6 +5,7 @@ const {
   BN,
   ether,
   balance,
+  expectRevert,
 } = require('@openzeppelin/test-helpers');
 
 const ERC20 = artifacts.require('ERC20');
@@ -25,8 +26,9 @@ const userWallet = '0x897607ab556177b0e0938541073ac1e01c55e483';
 
 contract('SaveTokenFarmer', function (accounts) {
   amount = '4892167171';
+  newAmount = '9784334342'; // newAmount equals amount value times 2
   owner = accounts[0];
-  notOwner = accounts[1];
+  recipient = accounts[1];
 
   beforeEach(async () => {
     // deploys the farmer's logic contract
@@ -71,7 +73,7 @@ contract('SaveTokenFarmer', function (accounts) {
     const ethBalance = await balance.current(userWallet);
     expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
-  describe.only('mint', async () => {
+  describe('mint', async () => {
     context('when user DOES NOT already have a SaveTokenFarmer', function () {
       it('should deploy proxy for msg.sender and set them as owner', async () => {
         // mint saveDAI tokens
@@ -125,9 +127,6 @@ contract('SaveTokenFarmer', function (accounts) {
         const finalocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
         const finalsaveDaiMinted = await savedaiInstance.balanceOf(userWallet);
 
-        // newAmount equals amount * 2
-        let newAmount = '9784334342';
-
         // all token balances should match
         assert.equal(finalcDAIbalance.toString(), newAmount);
         assert.equal(finalocDAIbalance.toString(), newAmount);
@@ -139,13 +138,48 @@ contract('SaveTokenFarmer', function (accounts) {
 
   describe('transfer', async () => {
     it('should revert if the cDai transfer fails', async () => {
+      // mint saveDAI tokens
+      await helpers.mint(amount, { from: userWallet });
 
+      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
+
+      await expectRevert(saveDaiProxy.transfer(recipient, newAmount, { from: userWallet }),
+        'The transfer must execute successfully');
     });
     it('should transfer the correct amount of cDai', async () => {
+      const balance = await cDaiInstance.balanceOf(recipient);
+      // mint saveDAI tokens
+      await helpers.mint(amount, { from: userWallet });
 
+      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
+
+      const initialProxyBalance = await cDaiInstance.balanceOf(proxyAddress);
+      const initialRecipientBalance = await cDaiInstance.balanceOf(recipient);
+
+      assert.equal(initialProxyBalance.toString(), amount);
+
+      await saveDaiProxy.transfer(recipient, amount, { from: userWallet });
+
+      const finalProxyBalance = await cDaiInstance.balanceOf(proxyAddress);
+      const finalReceiverBalance = await cDaiInstance.balanceOf(recipient);
+
+      const diff = initialProxyBalance.sub(finalProxyBalance);
+      const diff2 = finalReceiverBalance.sub(balance);
+
+      assert.equal(diff.toString(), amount);
+      assert.equal(diff2.toString(), amount);
     });
 	  it('should return true if the transfer is successful', async () => {
+      // mint saveDAI tokens
+      await helpers.mint(amount, { from: userWallet });
 
+      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
+
+      const bool = await saveDaiProxy.transfer.call(recipient, amount, { from: userWallet });
+      assert.isTrue(bool);
 	  });
   });
 });
