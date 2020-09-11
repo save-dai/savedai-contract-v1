@@ -28,7 +28,7 @@ const Pauser = '0x65d7a28e3265b37a6474929f336521b332c1681b933f6cb9f3376673440d86
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
-const compAddress = '0x897607ab556177b0e0938541073ac1e01c55e483';
+const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const userWallet = '0x897607ab556177b0e0938541073ac1e01c55e483';
 
@@ -96,7 +96,7 @@ contract('SaveDAI', function (accounts) {
     it('should revert if paused', async () => {
       await savedaiInstance.pause({ from: owner });
       // mint saveDAI tokens
-      await expectRevert(helpers.mint(amount, { from: userWallet }), 'Pausable: paused');
+      await expectRevert(helpers.mint(amount), 'Pausable: paused');
     });
     it('should mint saveDAI tokens', async () => {
       // Calculate how much DAI is needed to approve
@@ -298,15 +298,15 @@ contract('SaveDAI', function (accounts) {
         // Remove _amount of userWallelt's insurance
         const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
         // assert WithdrawForAssetandOTokens fires
-        const event = await transaction.logs[4].event;
+        const event = await transaction.logs[3].event;
         assert.equal(event, 'WithdrawForAssetandOTokens');
 
         // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[4].args._user;
+        const userAddress = await transaction.logs[3].args._user;
         assert.equal(userAddress.toLowerCase(), userWallet);
 
         // assert the correct amount of ocDAI insurance coverage was removed
-        const insuranceRemovedAmount = await transaction.logs[4].args._amount;
+        const insuranceRemovedAmount = await transaction.logs[3].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
       it('should burn _amount of msg.sender\'s saveDAI tokens', async () => {
@@ -328,10 +328,10 @@ contract('SaveDAI', function (accounts) {
 
     describe('withdrawForAsset', function () {
       it('revert if ths user does not have a farmer address', async () => {
-        await expectRevert(savedaiInstance.withdrawForAsset(saveDai, { from: notOwner }), 
+        await expectRevert(savedaiInstance.withdrawForAsset(saveDai, { from: notOwner }),
           'The user must have a farmer address');
       });
-      it.skip('should transfer cDAI from saveDAI and farmer contract to user', async () => {
+      it('should transfer cDAI from saveDAI and farmer contract to user', async () => {
         const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
 
         // Identify initial cDAI balances
@@ -363,10 +363,7 @@ contract('SaveDAI', function (accounts) {
         diffInContract = initialcDaiBalanceContract.sub(finalcDAIbalanceContract).add(cDaiMinted);
         diffInUser = finalcDAIbalanceUser.sub(initialcDAIbalanceUser);
 
-        console.log(diffInContract.toString());
-        console.log(diffInUser.toString());
-        console.log(cDaiMinted.toString());
-        //assert.equal(diffInContract.toString().substring(0, 7), diffInUser.toString().substring(0, 7));
+        assert.equal(diffInContract.toString().substring(0, 8), diffInUser.toString().substring(0, 8));
       });
       it('should emit a WithdrawForAsset event with the msg.sender\'s address and their total balance of insurance removed', async () => {
         const transaction = await savedaiInstance.withdrawForAsset(saveDai, { from: userWallet });
@@ -403,19 +400,20 @@ contract('SaveDAI', function (accounts) {
 
     describe('withdrawForUnderlyingAsset', function () {
       it('revert if ths user does not have a farmer address', async () => {
-        await expectRevert(savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: notOwner }), 
+        await expectRevert(savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: notOwner }),
           'The user must have a farmer address');
       });
-      it.skip('should decrease saveDAI contract by cDAI and ocDAI', async () => {
+      it('should decrease ocDAI from saveDAI contract and cDAI from farmer', async () => {
+        const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
         // Identify initial balances
-        const initialcDaiBalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
+        const initialcDaiBalanceContract = await cDaiInstance.balanceOf(proxyAddress);
         const initialocDaiBalanceContract = await ocDaiInstance.balanceOf(savedaiAddress);
 
         // Remove userWallet's insurance
         await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // Identify final balances
-        const finalcDAIbalanceContract = await cDaiInstance.balanceOf(savedaiAddress);
+        const finalcDAIbalanceContract = await cDaiInstance.balanceOf(proxyAddress);
         const finalocDaiBalanceContract = await ocDaiInstance.balanceOf(savedaiAddress);
 
         diffIncDai = initialcDaiBalanceContract.sub(finalcDAIbalanceContract);
@@ -425,7 +423,7 @@ contract('SaveDAI', function (accounts) {
         assert.equal(diffIncDai.toString(), saveDai);
         assert.equal(diffInocDai.toString(), saveDai);
       });
-      it.skip('should send msg.sender the newly minted DAI', async () => {
+      it('should send msg.sender the newly minted DAI', async () => {
         // Idenitfy the user's initialDaiBalance
         initialDaiBalance = await daiInstance.balanceOf(userWallet);
 
@@ -452,24 +450,24 @@ contract('SaveDAI', function (accounts) {
         const updatedDaiBalance = await daiInstance.balanceOf(userWallet);
         const diff = (updatedDaiBalance.sub(initialDaiBalance)) / 1e18;
 
-        assert.approximately(daiBoughtTotal, diff, 0.000000019);
+        assert.approximately(daiBoughtTotal, diff, 0.0000009);
       });
-      it.skip('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and their total balance of insurance removed', async () => {
+      it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and their total balance of insurance removed', async () => {
         const transaction = await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // assert WithdrawForUnderlyingAsset fires
-        const event = await transaction.logs[8].event;
+        const event = await transaction.logs[9].event;
         assert.equal(event, 'WithdrawForUnderlyingAsset');
 
         // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[8].args._user;
+        const userAddress = await transaction.logs[9].args._user;
         assert.equal(userAddress.toLowerCase(), userWallet);
 
         // assert the correct amount of ocDAI (insurance) was removed
-        const insuranceRemovedAmount = await transaction.logs[8].args._amount;
+        const insuranceRemovedAmount = await transaction.logs[9].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
-      it.skip('should burn the amount of msg.sender\'s saveDAI tokens', async () => {
+      it('should burn the amount of msg.sender\'s saveDAI tokens', async () => {
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);
 
         // Remove userWallelt's insurance
@@ -487,12 +485,24 @@ contract('SaveDAI', function (accounts) {
     });
 
     describe('exerciseInsurance', function () {
-      it.skip('should be able to call exercise using one vault', async () => {
+      it('revert if ths user does not have a farmer address', async () => {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
 
+        await expectRevert(savedaiInstance.exerciseInsurance(
+          amtToExercise,
+          vaultArray,
+          { from: notOwner },
+        ), 'The user must have a farmer address');
+      });
+      it('should be able to call exercise using one vault', async () => {
+        const amtToExercise = await savedaiInstance.balanceOf(userWallet);
+        const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
+
+        const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+
         const initialocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-        const initialcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
+        const initialcDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
 
         const totalSupplyBefore = await ocDaiInstance.totalSupply();
 
@@ -501,18 +511,14 @@ contract('SaveDAI', function (accounts) {
         txReceipt = await savedaiInstance.exerciseInsurance(
           amtToExercise,
           vaultArray,
-          { from: userWallet },
+          { from: userWallet,
+            gasPrice: 0 },
         );
 
-        const tx = await web3.eth.getTransaction(txReceipt.tx);
-        gasUsed = new BN(txReceipt.receipt.gasUsed);
-        gasPrice = new BN(tx.gasPrice);
+        const deltaEth = txReceipt.receipt.logs[6].args[1];
 
-        const deltaEth = txReceipt.receipt.logs[5].args[1];
 
-        const expectedEndETHBalance = initialETH
-          .sub(gasUsed.mul(gasPrice))
-          .add(deltaEth);
+        const expectedEndETHBalance = initialETH.add(deltaEth);
 
         // check that the user gets the right amount of ETH back
         finalETH = await balance.current(userWallet);
@@ -524,16 +530,18 @@ contract('SaveDAI', function (accounts) {
 
         // check that cDAI and ocDAI were transferred
         const endingocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-        const endingcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
+        const endingcDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
         assert.equal(initialocDAIbalance.sub(endingocDAIbalance).toString(), amtToExercise.toString());
         assert.equal(initialcDAIbalance.sub(endingcDAIbalance).toString(), amtToExercise.toString());
       });
-      it.skip('should be able to call exercise using multiple vaults', async () => {
+      it('should be able to call exercise using multiple vaults', async () => {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0xd89b6d5228672ec03ab5929d625e373b4f1f25f3', '0xcae687969d3a6c4649d114b1c768d5b1deae547b'];
 
+        const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+
         const initialocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-        const initialcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
+        const initialcDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
 
         const totalSupplyBefore = await ocDaiInstance.totalSupply();
 
@@ -542,18 +550,13 @@ contract('SaveDAI', function (accounts) {
         txReceipt = await savedaiInstance.exerciseInsurance(
           amtToExercise,
           vaultArray,
-          { from: userWallet },
+          { from: userWallet,
+            gasPrice: 0 },
         );
 
-        const tx = await web3.eth.getTransaction(txReceipt.tx);
-        gasUsed = new BN(txReceipt.receipt.gasUsed);
-        gasPrice = new BN(tx.gasPrice);
+        const deltaEth = txReceipt.receipt.logs[6].args[1];
 
-        const deltaEth = txReceipt.receipt.logs[5].args[1];
-
-        const expectedEndETHBalance = initialETH
-          .sub(gasUsed.mul(gasPrice))
-          .add(deltaEth);
+        const expectedEndETHBalance = initialETH.add(deltaEth);
 
         // check that the user gets the right amount of ETH back
         finalETH = await balance.current(userWallet);
@@ -565,11 +568,11 @@ contract('SaveDAI', function (accounts) {
 
         // check that cDAI and ocDAI were transferred
         const endingocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
-        const endingcDAIbalance = await cDaiInstance.balanceOf(savedaiAddress);
+        const endingcDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
         assert.equal(initialocDAIbalance.sub(endingocDAIbalance).toString(), amtToExercise.toString());
         assert.equal(initialcDAIbalance.sub(endingcDAIbalance).toString(), amtToExercise.toString());
       });
-      it.skip('should emit the amount of insurance to exercise', async () => {
+      it('should emit the amount of insurance to exercise', async () => {
         const amtToExercise = await savedaiInstance.balanceOf(userWallet);
         const vaultArray = ['0x076c95c6cd2eb823acc6347fdf5b3dd9b83511e4'];
 
@@ -593,6 +596,24 @@ contract('SaveDAI', function (accounts) {
       saveDai = saveDai.toNumber();
     });
     describe('withdrawForAssetandOTokens', function () {
+      it('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and the amount of insurance removed', async () => {
+        // Remove userWallelt's insurance
+        // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
+        const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
+
+        // assert WithdrawForAssetandOTokens fires
+        const event = await transaction.logs[3].event;
+        assert.equal(event, 'WithdrawForAssetandOTokens');
+
+        // assert msg.sender's address emits in the event
+        const userAddress = await transaction.logs[3].args._user;
+        assert.equal(userAddress.toLowerCase(), userWallet);
+
+        // assert the correct amount of ocDAI token coverage was removed
+        const insuranceRemovedAmount = await transaction.logs[3].args._amount;
+
+        assert.equal(insuranceRemovedAmount.toString(), saveDai);
+      });
       it('should transfer _amount of cDAI to msg.sender', async () => {
         // Increase time so ocDAI has expired
         await time.increase(increaseTime);
@@ -611,24 +632,6 @@ contract('SaveDAI', function (accounts) {
         const diff = finalUserBalance - initialBalance;
 
         assert.equal(diff, saveDai);
-      });
-      it.skip('should emit a WithdrawForAssetandOTokens event with the msg.sender\'s address and the amount of insurance removed', async () => {
-        // Remove userWallelt's insurance
-        // if ocDAI has expired, unbundle saveDAI and send user back _amount of cDAI
-        const transaction = await savedaiInstance.withdrawForAssetandOTokens(saveDai, { from: userWallet });
-
-        // assert WithdrawForAssetandOTokens fires
-        const event = await transaction.logs[2].event;
-        assert.equal(event, 'WithdrawForAssetandOTokens');
-
-        // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[2].args._user;
-        assert.equal(userAddress.toLowerCase(), userWallet);
-
-        // assert the correct amount of ocDAI token coverage was removed
-        const insuranceRemovedAmount = await transaction.logs[2].args._amount;
-
-        assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
       it('should burn the amount of msg.sender\'s saveDAI tokens', async () => {
         const initialSaveDaiBalance = await savedaiInstance.balanceOf(userWallet);

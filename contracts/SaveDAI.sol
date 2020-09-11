@@ -139,7 +139,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
 
     /**
      * @notice Called by anyone holding saveDAI tokens who wants to excercise the underlying
-     * ocDAI insurance. The caller transfers their saveDAI tokens and get paid out in ETH.
+     * ocDAI insurance. The caller transfers their saveDAI tokens and gets paid out in ETH.
      * @param _amount the number of saveDAI tokens on which to exercise insurance
      * @param vaultsToExerciseFrom the array of vaults to exercise from.
      */
@@ -149,6 +149,15 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         external
         override
     {
+        require(farmerProxy[msg.sender] != address(0), 
+            "The user must have a farmer address");
+
+        // get user's SaveTokenFarmer address
+        address proxy = farmerProxy[msg.sender];
+
+        // transfer cDAI from SaveTokenFarmer
+        require(ISaveTokenFarmer(proxy).transfer(address(this), _amount));
+
         // approve ocDai contract to spend both ocDai and cDai
         require(ocDai.approve(address(ocDai), _amount));
         require(cDai.approve(address(ocDai), _amount));
@@ -203,13 +212,23 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         override
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
-        require(farmerProxy[msg.sender] != address(0), "The user must have a farmer address");
+        require(farmerProxy[msg.sender] != address(0), 
+            "The user must have a farmer address");
+
+        // identify saveDAI contract's cDAI balance
+        uint256 initialcDaiBalance = cDai.balanceOf(address(this));
 
         // swap _amount of ocDAI on Uniswap for DAI
         uint256 daiTokens = _uniswapBuyDai(_amount);
 
-        // mint cDAI
-        uint256 cDAItokens = cDai.mint(daiTokens);
+        // mint cDAI - returns 0 when executed successfully
+        require(cDai.mint(daiTokens) == 0);
+
+        // identify saveDAI contract's updated cDAI balance
+        uint256 updatedcDaiBalance = cDai.balanceOf(address(this));
+
+        // determine amount of cDAI minted
+        uint256 cDaiTokens = updatedcDaiBalance.sub(initialcDaiBalance);
 
         // get the proxy address to transfer cDAI
         address proxy = farmerProxy[msg.sender];
@@ -218,7 +237,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         require(ISaveTokenFarmer(proxy).transfer(address(this), _amount));
         
         // transfer sum of newly minted cDAI with the original _amount in the SaveTokenFarmer
-        require(cDai.transfer(msg.sender, cDAItokens.add(_amount)));
+        require(cDai.transfer(msg.sender, cDaiTokens.add(_amount)));
         
         emit WithdrawForAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);
@@ -233,10 +252,11 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         override
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
-        require(farmerProxy[msg.sender] != address(0), "The user must have a farmer address");
+        require(farmerProxy[msg.sender] != address(0), 
+            "The user must have a farmer address");
 
         // identify saveDAI contract's DAI balance
-        uint256 initiaDaiBalance = dai.balanceOf(address(this));
+        uint256 initialDaiBalance = dai.balanceOf(address(this));
 
         // get the proxy address to redeem cDAI from
         address proxy = farmerProxy[msg.sender];
@@ -247,7 +267,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         // identify saveDAI contract's updated DAI balance
         uint256 updatedDaiBalance = dai.balanceOf(address(this));
 
-        uint256 daiRedeemed = updatedDaiBalance.sub(initiaDaiBalance);
+        uint256 daiRedeemed = updatedDaiBalance.sub(initialDaiBalance);
 
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
         require(ocDai.approve(address(ocDaiExchange), _amount));
