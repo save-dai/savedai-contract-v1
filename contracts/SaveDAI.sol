@@ -30,6 +30,9 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
     // Variable for pauser
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
+    // COMP token address
+    address public compToken;
+
     // interfaces
     UniswapFactoryInterface public uniswapFactory;
     UniswapExchangeInterface public daiUniswapExchange;
@@ -230,12 +233,16 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         override
     {
         require(!ocDai.hasExpired(), "ocDAI must not have expired");
+        require(farmerProxy[msg.sender] != address(0), "The user must have a farmer address");
 
         // identify saveDAI contract's DAI balance
         uint256 initiaDaiBalance = dai.balanceOf(address(this));
 
-        // Redeem returns 0 on success
-        require(cDai.redeem(_amount) == 0, "redeem function must execute successfully");
+        // get the proxy address to redeem cDAI from
+        address proxy = farmerProxy[msg.sender];
+
+        // transfer cDAI from SaveTokenFarmer
+        require(ISaveTokenFarmer(proxy).redeem(_amount, address(this)));
 
         // identify saveDAI contract's updated DAI balance
         uint256 updatedDaiBalance = dai.balanceOf(address(this));

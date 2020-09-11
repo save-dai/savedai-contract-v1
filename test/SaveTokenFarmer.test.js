@@ -63,6 +63,9 @@ contract('SaveTokenFarmer', function (accounts) {
       to: userWallet,
       value: ether('1'),
     });
+
+    // mint saveDAI tokens
+    await helpers.mint(amount, { from: userWallet });
   });
 
   it('user wallet should have DAI balance', async () => {
@@ -76,9 +79,6 @@ contract('SaveTokenFarmer', function (accounts) {
   describe('mint', async () => {
     context('when user DOES NOT already have a SaveTokenFarmer', function () {
       it('should deploy proxy for msg.sender and set them as owner', async () => {
-        // mint saveDAI tokens
-        await helpers.mint(amount, { from: userWallet });
-
         const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
         saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
 
@@ -87,9 +87,6 @@ contract('SaveTokenFarmer', function (accounts) {
         assert.equal(owner.toLowerCase(), userWallet);
       });
       it('should mint the cDai and store it in the user\'s SaveTokenFarmer', async () => {
-        // mint saveDAI tokens
-        await helpers.mint(amount, { from: userWallet });
-
         const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
         saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
 
@@ -105,9 +102,6 @@ contract('SaveTokenFarmer', function (accounts) {
     });
     context('when user already has a SaveTokenFarmer', function () {
       it('should mint the cDai and store it in the user\'s SaveTokenFarmer', async () => {
-        // mint saveDAI tokens
-        await helpers.mint(amount, { from: userWallet });
-
         const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
         saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
 
@@ -138,9 +132,6 @@ contract('SaveTokenFarmer', function (accounts) {
 
   describe('transfer', async () => {
     it('should revert if the cDai transfer fails', async () => {
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
-
       const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
       saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
 
@@ -149,8 +140,6 @@ contract('SaveTokenFarmer', function (accounts) {
     });
     it('should transfer the correct amount of cDai', async () => {
       const balance = await cDaiInstance.balanceOf(recipient);
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
 
       const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
       saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
@@ -172,14 +161,49 @@ contract('SaveTokenFarmer', function (accounts) {
       assert.equal(diff2.toString(), amount);
     });
 	  it('should return true if the transfer is successful', async () => {
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
-
       const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
       saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
 
       const bool = await saveDaiProxy.transfer.call(recipient, amount, { from: userWallet });
       assert.isTrue(bool);
 	  });
+  });
+
+  describe('redeem', async () => {
+    it('should revert if redemption is unsuccessful', async () => {
+      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
+
+      await expectRevert(saveDaiProxy.redeem(newAmount, savedaiAddress, { from: userWallet }),
+        'redeem function must execute successfully');
+    });
+    it('should transfer the dai redeemed', async () => {
+      // Idenitfy the user's initialDaiBalance
+      initialDaiBalance = await daiInstance.balanceOf(userWallet);
+
+      // Calculate how much DAI user will receive for cDAI and ocDAI
+      // 1. Get underlying value of cDai in DAI
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      exchangeRate = exchangeRate / 1e18;
+
+      const daiBought1 = (amount * exchangeRate) / 1e18;
+
+      // 2. calculate ocDAI for DAI on uniswap
+      const eth = await ocDaiExchange.getTokenToEthInputPrice(amount);
+      let daiBought2 = await daiExchange.getEthToTokenInputPrice(eth);
+      daiBought2 = daiBought2 / 1e18;
+
+      // add 1 + 2 together, should be really close to diff
+      const daiBoughtTotal = daiBought1 + daiBought2;
+
+      // Remove userWallet's insurance
+      await savedaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet });
+
+      // Idenitfy the user's updatedDaiBalance
+      const updatedDaiBalance = await daiInstance.balanceOf(userWallet);
+      const diff = (updatedDaiBalance.sub(initialDaiBalance)) / 1e18;
+
+      assert.approximately(daiBoughtTotal, diff, 0.000000019);
+    });
   });
 });

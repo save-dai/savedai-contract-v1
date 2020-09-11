@@ -55,11 +55,28 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
     /// @param amount The amount of cDAI to transfer.
     /// @return Returns true if succesfully executed.
     function transfer(address to, uint256 amount) external override returns (bool) {
-        // approve the transfer
-        cDai.approve(to, amount);
-
         require(cDai.transfer(to, amount), 
             "The transfer must execute successfully");
+        return true;
+    }
+
+    /// @dev Redeems the cDAI asset token for DAI and withdraws
+    /// the rewards / governance tokens that have accrued.
+    /// @param amount The amount of cDAI to redeem.
+    /// @param user The address to send the DAI to.
+    /// @return Returns true if succesfully executed.
+    function redeem(uint256 amount, address user) external override returns (bool) {
+        // Redeem returns 0 on success
+        require(cDai.redeem(amount) == 0, "redeem function must execute successfully");
+        
+        // identify DAI balance and transfer
+        uint256 daiBalance = dai.balanceOf(address(this));
+        require(dai.transfer(user, daiBalance), "must transfer");
+
+        // TODO
+        // withdraw reward 
+        //withdrawReward(user);
+
         return true;
     }
 
