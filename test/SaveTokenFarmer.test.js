@@ -68,6 +68,12 @@ contract('SaveTokenFarmer', function (accounts) {
       to: userWallet,
       value: ether('1'),
     });
+
+    // mint saveDAI tokens
+    await helpers.mint(amount, { from: userWallet });
+
+    proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+    saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
   });
 
   it('user wallet should have DAI balance', async () => {
@@ -81,23 +87,11 @@ contract('SaveTokenFarmer', function (accounts) {
   describe('mint', async () => {
     context('when user DOES NOT already have a SaveTokenFarmer', function () {
       it('should deploy proxy for msg.sender and set them as owner', async () => {
-        // mint saveDAI tokens
-        await helpers.mint(amount, { from: userWallet });
-
-        const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
-        saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
-
         const owner = await saveDaiProxy.owner();
 
         assert.equal(owner.toLowerCase(), userWallet);
       });
       it('should mint the cDai and store it in the user\'s SaveTokenFarmer', async () => {
-        // mint saveDAI tokens
-        await helpers.mint(amount, { from: userWallet });
-
-        const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
-        saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
-
         const cDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
         const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
         const saveDaiMinted = await savedaiInstance.balanceOf(userWallet);
@@ -109,18 +103,7 @@ contract('SaveTokenFarmer', function (accounts) {
       });
     });
     context('when user already has a SaveTokenFarmer', function () {
-      it.skip('should mint the cDai and store it in the user\'s SaveTokenFarmer', async () => {
-        // NOTE: This test passes when only the SaveTokenFarmer contract's tests are run. However,
-        // it will fail when the SaveDAI contract's tests run first and result in 2 cDAI mssing
-        // from the expected 9784334342. I'm assuming this has to do w/ Compound's rounding issue?
-
-        /*
-        // mint saveDAI tokens
-        await helpers.mint(amount, { from: userWallet });
-
-        const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
-        saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
-
+      it('should mint the cDai and store it in the user\'s SaveTokenFarmer', async () => {
         const cDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
         const ocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
         const saveDaiMinted = await savedaiInstance.balanceOf(userWallet);
@@ -137,11 +120,18 @@ contract('SaveTokenFarmer', function (accounts) {
         const finalocDAIbalance = await ocDaiInstance.balanceOf(savedaiAddress);
         const finalsaveDaiMinted = await savedaiInstance.balanceOf(userWallet);
 
+        const cDAIdiff = finalcDAIbalance.sub(cDAIbalance);
+        const ocDAIdiff = finalocDAIbalance.sub(ocDAIbalance);
+        const saveDAIdiff = finalsaveDaiMinted.sub(saveDaiMinted);
+
+        const cDAIsum = cDAIdiff.add(cDAIbalance);
+        const ocDAIsum = ocDAIdiff.add(ocDAIbalance);
+        const saveDAIsum = saveDAIdiff.add(saveDaiMinted);
+
         // all token balances should match
-        assert.equal(finalcDAIbalance.toString(), newAmount);
-        assert.equal(finalocDAIbalance.toString(), newAmount);
-        assert.equal(finalsaveDaiMinted.toString(), newAmount);
-        */
+        assert.equal(finalcDAIbalance.toString(), cDAIsum.toString());
+        assert.equal(finalocDAIbalance.toString(), ocDAIsum.toString());
+        assert.equal(finalsaveDaiMinted.toString(), saveDAIsum.toString());
       });
     });
 
@@ -149,23 +139,11 @@ contract('SaveTokenFarmer', function (accounts) {
 
   describe('transfer', async () => {
     it('should revert if the cDai transfer fails', async () => {
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
-
-      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
-      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
-
       await expectRevert(saveDaiProxy.transfer(recipient, newAmount, { from: userWallet }),
         'The transfer must execute successfully');
     });
     it('should transfer the correct amount of cDai', async () => {
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
-
       const balance = await cDaiInstance.balanceOf(recipient);
-
-      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
-      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
 
       const initialProxyBalance = await cDaiInstance.balanceOf(proxyAddress);
       const initialRecipientBalance = await cDaiInstance.balanceOf(recipient);
@@ -184,12 +162,6 @@ contract('SaveTokenFarmer', function (accounts) {
       assert.equal(diff2.toString(), amount);
     });
 	  it('should return true if the transfer is successful', async () => {
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
-
-      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
-      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
-
       const bool = await saveDaiProxy.transfer.call(recipient, amount, { from: userWallet });
       assert.isTrue(bool);
 	  });
@@ -197,19 +169,10 @@ contract('SaveTokenFarmer', function (accounts) {
 
   describe('redeem', async () => {
     it('should revert if redemption is unsuccessful', async () => {
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
-
-      const proxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
-      saveDaiProxy = await SaveTokenFarmer.at(proxyAddress);
-
       await expectRevert(saveDaiProxy.redeem(newAmount, savedaiAddress, { from: userWallet }),
         'redeem function must execute successfully');
     });
     it('should transfer the dai redeemed', async () => {
-      // mint saveDAI tokens
-      await helpers.mint(amount, { from: userWallet });
-
       // Idenitfy the user's initialDaiBalance
       initialDaiBalance = await daiInstance.balanceOf(userWallet);
 
