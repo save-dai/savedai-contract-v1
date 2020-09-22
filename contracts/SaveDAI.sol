@@ -137,6 +137,36 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         return true;
     }
 
+    /// @dev saveDAI's token transfer function.
+    /// @param recipient The address receiving your token.
+    /// @param amount The number of tokens to transfer.
+    /// @return Returns true if successfully executed.
+    function transfer(address recipient, uint256 amount)
+        public
+        override
+        returns (bool) 
+    {
+        address senderProxy = farmerProxy[msg.sender];
+        address recipientProxy = farmerProxy[recipient];
+
+        // if recipient does not have a proxy, deploy a proxy
+        if (recipientProxy == address(0)) {
+            recipientProxy = deployProxy(
+                recipient,
+                address(cDai),
+                address(dai),
+                compToken);
+        } 
+
+        // transfer interest bearing token to recipient
+        ISaveTokenFarmer(senderProxy).transfer(recipientProxy, amount);
+
+        // transfer TokenK tokens
+        super.transfer(recipient, amount);
+
+        return true;
+    }
+
     /**
      * @notice Called by anyone holding saveDAI tokens who wants to excercise the underlying
      * ocDAI insurance. The caller transfers their saveDAI tokens and gets paid out in ETH.

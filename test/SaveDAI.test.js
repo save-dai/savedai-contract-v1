@@ -183,6 +183,70 @@ contract('SaveDAI', function (accounts) {
       assert.isTrue(bool);
     });
   });
+  describe('transfer', function () {
+    beforeEach(async () => {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
+      senderProxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveTokenFarmer = await SaveTokenFarmer.at(senderProxyAddress);
+    });
+    it('should transfer all saveDAI tokens from sender to recipient (full transfer)', async () => {
+      const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
+
+      await savedaiInstance.transfer(recipient, senderBalanceBefore, { from: userWallet });
+
+      const senderBalanceAfter = await savedaiInstance.balanceOf(userWallet);
+      const recipientBalanceAfter = await savedaiInstance.balanceOf(recipient);
+
+      const diff = senderBalanceBefore.sub(senderBalanceAfter);
+
+      assert.equal(senderBalanceBefore.toString(), diff.toString());
+      assert.equal(senderBalanceBefore.toString(), recipientBalanceAfter.toString());
+    });
+    it('should deploy proxy and send all cDAI to recipient (full transfer)', async () => {
+      const sendercDAIbalanceBefore = await cDaiInstance.balanceOf(senderProxyAddress);
+
+      await savedaiInstance.transfer(recipient, sendercDAIbalanceBefore, { from: userWallet });
+
+      recipientProxyAddress = await savedaiInstance.farmerProxy.call(recipient);
+
+      const sendercDAIbalanceAfter = await cDaiInstance.balanceOf(senderProxyAddress);
+      const recipientcDAIBalanceAfter = await cDaiInstance.balanceOf(recipientProxyAddress);
+
+      const diff = sendercDAIbalanceBefore.sub(sendercDAIbalanceAfter);
+
+      assert.equal(sendercDAIbalanceBefore.toString(), diff.toString());
+      assert.equal(sendercDAIbalanceBefore.toString(), recipientcDAIBalanceAfter.toString());
+    });
+    it('should transfer saveDAI from sender to recipient (partial transfer)', async () => {
+      const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
+      const partialTransfer = senderBalanceBefore.div(new BN (4));
+      const remainder = senderBalanceBefore.sub(partialTransfer);
+
+      await savedaiInstance.transfer(recipient, partialTransfer, { from: userWallet });
+
+      const senderBalanceAfter = await savedaiInstance.balanceOf(userWallet);
+      const recipientBalanceAfter = await savedaiInstance.balanceOf(recipient);
+
+      assert.equal(remainder.toString(), senderBalanceAfter.toString());
+      assert.equal(partialTransfer.toString(), recipientBalanceAfter.toString());
+    });
+    it('should deploy proxy and send cDAI to recipient (partial transfer)', async function () {
+      const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
+      const partialTransfer = senderBalanceBefore.div(new BN (4));
+      const remainder = senderBalanceBefore.sub(partialTransfer);
+
+      await savedaiInstance.transfer(recipient, partialTransfer, { from: userWallet });
+
+      recipientProxyAddress = await savedaiInstance.farmerProxy.call(recipient);
+
+      const sendercDAIbalanceAfter = await cDaiInstance.balanceOf(senderProxyAddress);
+      const recipientcDAIBalanceAfter = await cDaiInstance.balanceOf(recipientProxyAddress);
+
+      assert.equal(remainder.toString(), sendercDAIbalanceAfter.toString());
+      assert.equal(partialTransfer.toString(), recipientcDAIBalanceAfter.toString());
+    });
+  });
   describe('getCostOfOToken', function () {
     it('should return premium to pay for ocDAI tokens', async () => {
       const premium = await savedaiInstance.getCostOfOToken.call(amount);
