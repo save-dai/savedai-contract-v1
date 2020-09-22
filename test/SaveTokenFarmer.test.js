@@ -86,10 +86,14 @@ contract('SaveTokenFarmer', function (accounts) {
   });
   describe('mint', async () => {
     context('when user DOES NOT already have a SaveTokenFarmer', function () {
+      it('should revert if not called by the SaveDAI contract', async () => {
+        await expectRevert(saveDaiProxy.mint({ from: userWallet }), 
+          'Ownable: caller is not the owner');
+      });
       it('should deploy proxy for msg.sender and set them as owner', async () => {
         const owner = await saveDaiProxy.owner();
 
-        assert.equal(owner.toLowerCase(), userWallet);
+        assert.equal(owner.toLowerCase(), savedaiAddress.toLowerCase());
       });
       it('should mint the cDai and store it in the user\'s SaveTokenFarmer', async () => {
         const cDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
@@ -138,8 +142,12 @@ contract('SaveTokenFarmer', function (accounts) {
   });
 
   describe('transfer', async () => {
-    it('should revert if the cDai transfer fails', async () => {
-      await expectRevert(saveDaiProxy.transfer(recipient, newAmount, { from: userWallet }),
+    it('should revert if not called by the SaveDAI contract', async () => {
+      await expectRevert(saveDaiProxy.transfer(recipient, amount, { from: userWallet }), 
+        'Ownable: caller is not the owner');
+    });
+    it.skip('should revert if the cDai transfer fails', async () => {
+      await expectRevert(savedaiInstance.transfer(recipient, newAmount, { from: userWallet }),
         'The transfer must execute successfully');
     });
     it('should transfer the correct amount of cDai', async () => {
@@ -168,6 +176,10 @@ contract('SaveTokenFarmer', function (accounts) {
   });
 
   describe('redeem', async () => {
+    it('should revert if not called by the SaveDAI contract', async () => {
+      await expectRevert(saveDaiProxy.redeem(amount, userWallet, { from: userWallet }), 
+        'Ownable: caller is not the owner');
+    });
     it('should revert if redemption is unsuccessful', async () => {
       await expectRevert(saveDaiProxy.redeem(newAmount, savedaiAddress, { from: userWallet }),
         'redeem function must execute successfully');

@@ -39,7 +39,12 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
     /// @dev Mint the cDAI asset token that sits in the contract and accrues interest as
     /// well as the corresponding governance / rewards tokens, COMP in this case.
     /// @return The amount of cDAI minted.
-    function mint() external override returns (uint256) {
+    function mint() 
+        external 
+        override 
+        onlyOwner 
+        returns (uint256) 
+    {
         // identify the current balance of the contract
         uint256 daiBalance = dai.balanceOf(address(this));
 
@@ -54,7 +59,12 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
     /// @param to The address the cDAI should be transferred to.
     /// @param amount The amount of cDAI to transfer.
     /// @return Returns true if succesfully executed.
-    function transfer(address to, uint256 amount) external override returns (bool) {
+    function transfer(address to, uint256 amount) 
+        external 
+        override 
+        onlyOwner 
+        returns (bool) 
+    {
         require(cDai.transfer(to, amount), 
             "The transfer must execute successfully");
         return true;
@@ -65,7 +75,12 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
     /// @param amount The amount of cDAI to redeem.
     /// @param user The address to send the DAI to.
     /// @return Returns true if succesfully executed.
-    function redeem(uint256 amount, address user) external override returns (bool) {
+    function redeem(uint256 amount, address user) 
+        external 
+        override 
+        onlyOwner 
+        returns (bool) 
+    {
         // Redeem returns 0 on success
         require(cDai.redeem(amount) == 0, "redeem function must execute successfully");
         
@@ -88,7 +103,10 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
     * @notice This function mints cDAI tokens
     * @param _amount The amount of DAI tokens transferred to Compound
     */
-    function _mintCDai(uint256 _amount) internal returns (uint256) {
+    function _mintCDai(uint256 _amount) 
+        internal 
+        returns (uint256) 
+    {
         // identify the current balance of the saveDAI contract
         uint256 initialBalance = cDai.balanceOf(address(this));
         // mint cDai
