@@ -79,11 +79,9 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         );
     }
 
-    /**
-    * @notice This function mints saveDAI tokens
-    * @param _amount The number of saveDAI to mint
-    * @return Returns true if executed successfully
-    */
+    /// @notice This function mints saveDAI tokens
+    /// @param _amount The number of saveDAI to mint
+    /// @return Returns true if executed successfully
     function mint(uint256 _amount)
         external
         override
@@ -206,12 +204,10 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         _burn(msg.sender, amount);
     }
 
-    /**
-     * @notice Called by anyone holding saveDAI tokens who wants to excercise the underlying
-     * ocDAI insurance. The caller transfers their saveDAI tokens and gets paid out in ETH.
-     * @param _amount the number of saveDAI tokens on which to exercise insurance
-     * @param vaultsToExerciseFrom the array of vaults to exercise from.
-     */
+    /// @notice Called by anyone holding saveDAI tokens who wants to excercise the underlying
+    /// ocDAI insurance. The caller transfers their saveDAI tokens and gets paid out in ETH.
+    /// @param _amount the number of saveDAI tokens on which to exercise insurance
+    /// @param vaultsToExerciseFrom the array of vaults to exercise from.
     function exerciseInsurance(
         uint256 _amount,
         address payable[] calldata vaultsToExerciseFrom)
@@ -245,10 +241,8 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         emit ExerciseInsurance(_amount, EthReturned, caller);
     }
 
-    /**
-    * @notice This function will unbundle your saveDAI and transfer ocDAI and cDAI to msg.sender
-    * @param _amount The amount of saveDAI tokens to unbundle
-    */
+    /// @notice This function will unbundle your saveDAI and transfer ocDAI and cDAI to msg.sender
+    /// @param _amount The amount of saveDAI tokens to unbundle
     function withdrawForAssetandOTokens(uint256 _amount)
         external
         override
@@ -272,10 +266,8 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         emit WithdrawForAssetandOTokens(msg.sender, _amount);
     }
 
-    /**
-    * @notice This function will remove insurance and exchange your saveDAI for cDAI
-    * @param _amount The amount of saveDAI tokens to unbundle
-    */
+    /// @notice This function will remove insurance and exchange your saveDAI for cDAI
+    /// @param _amount The amount of saveDAI tokens to unbundle
     function withdrawForAsset(uint256 _amount)
         external
         override
@@ -312,10 +304,8 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         _burn(msg.sender, _amount);
     }
 
-    /**
-    * @notice This function will remove insurance and exchange your saveDAI for DAI
-    * @param _amount The amount of saveDAI tokens to unbundle
-    */
+    /// @notice This function will remove insurance and exchange your saveDAI for DAI
+    /// @param _amount The amount of saveDAI tokens to unbundle
     function withdrawForUnderlyingAsset(uint256 _amount)
         external
         override
@@ -350,11 +340,27 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         _burn(msg.sender, _amount);
     }
 
-    /**
-    * @notice This function calculates the premiums to be paid if a buyer wants to
-    * buy ocDAI on Uniswap
-    * @param _oTokensToBuy The number of ocDAI to buy
-    */
+    /// @dev The amount of rewards / governance tokens earned in the SaveTokenFarmer.
+    /// @return Returns the amount of rewards / governance tokens earned.
+    function getTotalCOMPEarned()
+        public
+        returns (uint256) 
+    {
+        address proxy = farmerProxy[msg.sender];
+        return ISaveTokenFarmer(proxy).getTotalCOMPEarned();
+    }
+
+    /// @dev Withdraw the COMP governance tokens earned in the SaveTokenFarmer.
+    function withdrawReward() 
+        public
+    {
+        address proxy = farmerProxy[msg.sender];
+        ISaveTokenFarmer(proxy).withdrawReward(msg.sender);
+    }
+
+    /// @notice This function calculates the premiums to be paid if a buyer wants to
+    /// buy ocDAI on Uniswap
+    /// @param _oTokensToBuy The number of ocDAI to buy
     function getCostOfOToken(uint256 _oTokensToBuy) public view returns (uint256) {
         // get the amount of ETH that needs to be paid for _oTokensToBuy.
         uint256 ethToPay = ocDaiExchange.getEthToTokenOutputPrice(
@@ -365,11 +371,9 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         return daiUniswapExchange.getTokenToEthOutputPrice(ethToPay);
     }
 
-    /**
-    * @notice Returns the value in DAI for a given amount of saveDAI provided
-    * @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
-    * @return The value in DAI
-    */
+    /// @notice Returns the value in DAI for a given amount of saveDAI provided
+    /// @param _saveDaiAmount The amount of saveDAI to convert to price in DAI
+    /// @return The value in DAI
     function saveDaiPriceInDaiCurrent(uint256 _saveDaiAmount) 
         external
         override 
@@ -379,27 +383,23 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         return _getCostofAsset(_saveDaiAmount).add(oTokenCost);
     }
 
-    /**
-     * @notice Allows admin to pause contract
-     */
+    /// @notice Allows admin to pause contract
     function pause() external override {
         require(hasRole(PAUSER_ROLE, msg.sender),
             "Caller must be admin");
         _pause();
     }
 
-    /**
-     * @notice Allows admin to unpause contract
-     */
+    /// @notice Allows admin to unpause contract
     function unpause() external override {
         require(hasRole(PAUSER_ROLE, msg.sender),
             "Caller must be admin");
         _unpause();
     }
 
-    /*
-    * Internal functions
-    */
+    /***************
+    INTERNAL FUNCTIONS
+    ***************/
     function _getCostofAsset(uint256 _amount) internal returns (uint256) {
         // calculate DAI needed to mint _amount of cDAI
         uint256 exchangeRate = cDai.exchangeRateCurrent();
@@ -407,10 +407,8 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         return _amount.mul(exchangeRate).add(10**18-1).div(10**18);
     }
  
-    /**
-    * @notice This function buys ocDAI tokens on uniswap
-    * @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function
-    */
+    /// @notice This function buys ocDAI tokens on uniswap
+    /// @param _premium The amount in DAI tokens needed to insure _amount tokens in mint function
     function _uniswapBuyOCDai(uint256 _premium) internal returns (uint256) {
         return daiUniswapExchange.tokenToTokenSwapInput (
                 _premium, // tokens sold
@@ -421,10 +419,8 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         );
     }
 
-    /**
-    * @notice This function buys DAI on uniswap
-    * @param _ocDaiTokens The amount in ocDAI tokens to exchange
-    */
+    /// @notice This function buys DAI on uniswap
+    /// @param _ocDaiTokens The amount in ocDAI tokens to exchange
     function _uniswapBuyDai(uint256 _ocDaiTokens) internal returns (uint256) {
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
         require(ocDai.approve(address(ocDaiExchange), _ocDaiTokens));
@@ -438,10 +434,8 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         );
     }
 
-    /**
-    * @notice This function instantiates an interface for a given exchange's address
-    * @param _tokenAddress The token's address
-    */
+    /// @notice This function instantiates an interface for a given exchange's address
+    /// @param _tokenAddress The token's address
     function _getExchange(address _tokenAddress) internal view returns (UniswapExchangeInterface) {
         UniswapExchangeInterface exchange = UniswapExchangeInterface(
             uniswapFactory.getExchange(address(_tokenAddress))

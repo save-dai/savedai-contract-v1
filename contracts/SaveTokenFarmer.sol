@@ -95,9 +95,28 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
         return true;
     }
 
+    /// @dev Returns the COMP balance that has accured in the contract.
+    /// @return Returns the balance of COMP in the contract.
+    function getTotalCOMPEarned() 
+        external
+        override
+        onlyOwner 
+        returns (uint256) 
+    {
+        IComptrollerLens comptroller = IComptrollerLens(address(cDai.comptroller()));
+        comptroller.claimComp(address(this));
+
+        uint256 balance = comp.balanceOf(address(this));
+        return balance;
+    }
+
     /// @dev Allows user to withdraw the accrued COMP tokens at any time.
     /// @param user The address to send the COMP tokens to.
-    function withdrawReward(address user) public onlyOwner {
+    function withdrawReward(address user) 
+        public
+        override
+        onlyOwner
+    {
         IComptrollerLens comptroller = IComptrollerLens(address(cDai.comptroller()));
         comptroller.claimComp(address(this));
 
@@ -105,9 +124,9 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
         require(comp.transfer(user, balance), "must transfer");
     }
 
-    /*
-    /// @dev Internal functions
-    */
+    /***************
+    INTERNAL FUNCTIONS
+    ***************/
 
     /// @notice This function mints cDAI tokens
     /// @param _amount The amount of DAI tokens transferred to Compound

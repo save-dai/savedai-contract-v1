@@ -406,6 +406,45 @@ contract('SaveDAI', function (accounts) {
       assert.equal(proxyBalanceAfter, 0);
     });
   });
+  describe('getTotalCOMPEarned', async function () {
+    beforeEach(async () => {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
+      senderProxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveTokenFarmer = await SaveTokenFarmer.at(senderProxyAddress);
+    });
+    it('should return total comp earned', async () => {
+      await time.advanceBlock();
+
+      const metaData = await lensContract.methods.getCompBalanceMetadataExt(
+        compAddress, comptroller, senderProxyAddress).call();
+      const metaDataAccrued = metaData[3];
+
+      const earned = await savedaiInstance.getTotalCOMPEarned.call({ from: userWallet });
+      assert.equal(metaDataAccrued, earned);
+    });
+  });
+  describe('withdrawReward', async function () {
+    beforeEach(async function () {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
+      senderProxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveTokenFarmer = await SaveTokenFarmer.at(senderProxyAddress);
+    });
+    it('should transfer comp balance to userWallet', async function () {
+      await time.advanceBlock();
+
+      await savedaiInstance.withdrawReward({ from: userWallet });
+
+      const metaData = await lensContract.methods.getCompBalanceMetadataExt(
+        compAddress, comptroller, userWallet).call();
+      const metaDataBalance = metaData[0];
+
+      const balance = await compInstance.balanceOf(userWallet);
+
+      assert.equal(metaDataBalance, balance);
+    });
+  });
   describe('getCostOfOToken', function () {
     it('should return premium to pay for ocDAI tokens', async () => {
       const premium = await savedaiInstance.getCostOfOToken.call(amount);
