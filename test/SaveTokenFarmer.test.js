@@ -177,42 +177,14 @@ contract('SaveTokenFarmer', function (accounts) {
 	  });
   });
 
-  describe.skip('redeem', async () => {
+  describe('redeem', async () => {
     it('should revert if not called by the SaveDAI contract', async () => {
       await expectRevert(saveDaiProxy.redeem(amount, userWallet, { from: userWallet }),
         'Ownable: caller is not the owner');
     });
     it('should revert if redemption is unsuccessful', async () => {
-      await expectRevert(savedaiInstance.redeem(newAmount, savedaiAddress, { from: userWallet }),
+      await expectRevert(savedaiInstance.redeem(newAmount, { from: userWallet }),
         'redeem function must execute successfully');
-    });
-    it('should transfer the dai redeemed', async () => {
-      // Idenitfy the user's initialDaiBalance
-      initialDaiBalance = await daiInstance.balanceOf(userWallet);
-
-      // Calculate how much DAI user will receive for cDAI and ocDAI
-      // 1. Get underlying value of cDai in DAI
-      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
-      exchangeRate = exchangeRate / 1e18;
-
-      const daiBought1 = (amount * exchangeRate) / 1e18;
-
-      // 2. calculate ocDAI for DAI on uniswap
-      const eth = await ocDaiExchange.getTokenToEthInputPrice(amount);
-      let daiBought2 = await daiExchange.getEthToTokenInputPrice(eth);
-      daiBought2 = daiBought2 / 1e18;
-
-      // add 1 + 2 together, should be really close to diff
-      const daiBoughtTotal = daiBought1 + daiBought2;
-
-      // Remove userWallet's insurance
-      await savedaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet });
-
-      // Idenitfy the user's updatedDaiBalance
-      const updatedDaiBalance = await daiInstance.balanceOf(userWallet);
-      const diff = (updatedDaiBalance.sub(initialDaiBalance)) / 1e18;
-
-      assert.approximately(daiBoughtTotal, diff, 0.0000009);
     });
   });
 });

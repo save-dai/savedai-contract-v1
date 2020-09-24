@@ -3,7 +3,7 @@ const provider = 'http://127.0.0.1:8545';
 const web3Provider = new Web3.providers.HttpProvider(provider);
 const web3 = new Web3(web3Provider);
 const helpers = require('./helpers/helpers.js');
-
+const lensABI = require('./abi/lens.json'); // ABI for Compound's CErc20 Contract
 const { expect } = require('chai');
 
 const {
@@ -19,6 +19,7 @@ const SaveDAI = artifacts.require('SaveDAI');
 const SaveTokenFarmer = artifacts.require('SaveTokenFarmer');
 const CTokenInterface = artifacts.require('CTokenInterface');
 const OTokenInterface = artifacts.require('OTokenInterface');
+const IComptrollerLens = artifacts.require('IComptrollerLens');
 const ERC20 = artifacts.require('ERC20');
 const UniswapFactoryInterface = artifacts.require('UniswapFactoryInterface');
 const UniswapExchangeInterface = artifacts.require('UniswapExchangeInterface');
@@ -31,6 +32,8 @@ const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const userWallet = '0x897607ab556177b0e0938541073ac1e01c55e483';
+const lensAddress = web3.utils.toChecksumAddress('0xd513d22422a3062Bd342Ae374b4b9c20E0a9a074');
+const comptroller = web3.utils.toChecksumAddress('0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b');
 
 contract('SaveDAI', function (accounts) {
   // amount of ocDAI, cDAI, saveDAI we want to mint
@@ -45,6 +48,8 @@ contract('SaveDAI', function (accounts) {
     // deploys the farmer's logic contract
     saveTokenFarmer = await SaveTokenFarmer.new();
     saveTokenFarmerAddress = saveTokenFarmer.address;
+
+    lensContract = new web3.eth.Contract(lensABI, lensAddress);
 
     savedai = await SaveDAI.new(
       uniswapFactoryAddress,
@@ -61,6 +66,7 @@ contract('SaveDAI', function (accounts) {
     daiInstance = await ERC20.at(daiAddress);
     ocDaiInstance = await OTokenInterface.at(ocDaiAddress);
     cDaiInstance = await CTokenInterface.at(cDaiAddress);
+    compInstance = await ERC20.at(compAddress);
     uniswapFactory = await UniswapFactoryInterface.at(uniswapFactoryAddress);
 
     const ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
@@ -245,6 +251,76 @@ contract('SaveDAI', function (accounts) {
 
       assert.equal(remainder.toString(), sendercDAIbalanceAfter.toString());
       assert.equal(partialTransfer.toString(), recipientcDAIBalanceAfter.toString());
+    });
+  });
+  describe('redeem', function () {
+    beforeEach(async () => {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
+      senderProxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveTokenFarmer = await SaveTokenFarmer.at(senderProxyAddress);
+    });
+    it('should decrease cDAI balance in proxy to 0 when redeeming all', async () => {
+      const initialSaveDAIBalance = await savedaiInstance.balanceOf(userWallet);
+      await savedaiInstance.redeem(initialSaveDAIBalance, { from : userWallet });
+
+      const endingcDAIbalance = await cDaiInstance.balanceOf(senderProxyAddress);
+
+      assert.equal(endingcDAIbalance.toString(), 0);
+    });
+    it('should decrease saveDAI balance to 0 when redeeming all', async () => {
+      const initialSaveDAIBalance = await savedaiInstance.balanceOf(userWallet);
+      await savedaiInstance.redeem(initialSaveDAIBalance, { from : userWallet });
+
+      const endingSaveDAIBalance = await savedaiInstance.balanceOf(userWallet);
+      assert.equal(endingSaveDAIBalance.toString(), 0);
+    });
+    it('should transfer DAI to user', async () => {
+      // Identify the user's initialDaiBalance
+      const initialDAIbalance = await daiInstance.balanceOf(userWallet);
+
+      // underlying value of cDAI in DAI
+      let underlyingValue = await cDaiInstance.balanceOfUnderlying.call(senderProxyAddress);
+      underlyingValue = underlyingValue / 1e18;
+
+      // redeem total amount
+      const initialSaveDAIBalance = await savedaiInstance.balanceOf(userWallet);
+      await savedaiInstance.redeem(initialSaveDAIBalance, { from : userWallet });
+
+      // Calculate difference in user's DAI balance
+      const endingDAIbalance = await daiInstance.balanceOf(userWallet);
+      let diffInBalnce = endingDAIbalance.sub(initialDAIbalance);
+      diffInBalnce = diffInBalnce / 1e18;
+
+      assert.equal(Math.round(underlyingValue), Math.round(diffInBalnce));
+    });
+    it('should transfer COMP to user', async () => {
+      await time.advanceBlock();
+
+      // redeem total amount
+      const initialSaveDAIBalance = await savedaiInstance.balanceOf(userWallet);
+      await savedaiInstance.redeem(initialSaveDAIBalance, { from : userWallet });
+
+      // Identify the user's COMP balance
+      const endingCOMPbalance = await compInstance.balanceOf(userWallet);
+
+      // Identify COMP balance of proxy
+      const metaDataProxy = await lensContract.methods.getCompBalanceMetadataExt(
+        compAddress, comptroller, senderProxyAddress).call();
+      const balance = metaDataProxy[0];
+      const allocated = metaDataProxy[3];
+      const proxyBalanceAfter = balance + allocated;
+
+      // Identify COMP balance of user
+      const metaDataUser = await lensContract.methods.getCompBalanceMetadataExt(
+        compAddress, comptroller, userWallet).call();
+      const userBalance = metaDataUser[0];
+
+      // check COMP balance in two different ways
+      assert.equal(userBalance, endingCOMPbalance.toString());
+
+      // check COMP balance is 0 in proxy
+      assert.equal(proxyBalanceAfter, 0);
     });
   });
   describe('getCostOfOToken', function () {
@@ -520,15 +596,15 @@ contract('SaveDAI', function (accounts) {
         const transaction = await savedaiInstance.withdrawForUnderlyingAsset(saveDai, { from: userWallet });
 
         // assert WithdrawForUnderlyingAsset fires
-        const event = await transaction.logs[9].event;
+        const event = await transaction.logs[11].event;
         assert.equal(event, 'WithdrawForUnderlyingAsset');
 
         // assert msg.sender's address emits in the event
-        const userAddress = await transaction.logs[9].args._user;
+        const userAddress = await transaction.logs[11].args._user;
         assert.equal(userAddress.toLowerCase(), userWallet);
 
         // assert the correct amount of ocDAI (insurance) was removed
-        const insuranceRemovedAmount = await transaction.logs[9].args._amount;
+        const insuranceRemovedAmount = await transaction.logs[11].args._amount;
         assert.equal(insuranceRemovedAmount.toString(), saveDai);
       });
       it('should burn the amount of msg.sender\'s saveDAI tokens', async () => {

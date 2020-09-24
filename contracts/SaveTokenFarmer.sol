@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "rewards-farmer/contracts/Farmer.sol";
 import "./lib/ISaveTokenFarmer.sol";
 import "./lib/CTokenInterface.sol";
+import "./lib/IComptrollerLens.sol";
 
  /// @dev The SaveTokenFarmer contract inherits from the base Farmer contract and
  /// is extended to support necessary functionality associated with rewards and governance tokens.
@@ -83,26 +84,33 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
     {
         // Redeem returns 0 on success
         require(cDai.redeem(amount) == 0, "redeem function must execute successfully");
-        
+
         // identify DAI balance and transfer
         uint256 daiBalance = dai.balanceOf(address(this));
         require(dai.transfer(user, daiBalance), "must transfer");
 
-        // TODO
-        // withdraw reward 
-        //withdrawReward(user);
+        // withdraw reward
+        withdrawReward(user);
 
         return true;
     }
 
+    /// @dev Allows user to withdraw the accrued COMP tokens at any time.
+    /// @param user The address to send the COMP tokens to.
+    function withdrawReward(address user) public onlyOwner {
+        IComptrollerLens comptroller = IComptrollerLens(address(cDai.comptroller()));
+        comptroller.claimComp(address(this));
+
+        uint256 balance = comp.balanceOf(address(this));
+        require(comp.transfer(user, balance), "must transfer");
+    }
+
     /*
-    * Internal functions
+    /// @dev Internal functions
     */
 
-    /**
-    * @notice This function mints cDAI tokens
-    * @param _amount The amount of DAI tokens transferred to Compound
-    */
+    /// @notice This function mints cDAI tokens
+    /// @param _amount The amount of DAI tokens transferred to Compound
     function _mintCDai(uint256 _amount) 
         internal 
         returns (uint256) 
