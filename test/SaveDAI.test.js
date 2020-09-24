@@ -40,6 +40,8 @@ contract('SaveDAI', function (accounts) {
   amount = '4892167171';
   owner = accounts[0];
   notOwner = accounts[1];
+  recipient = accounts[2];
+  relayer = accounts[3];
 
   // Number of seconds to increase to ensure February 21st, 2021 has elapsed
   increaseTime = 26409094;
@@ -237,12 +239,93 @@ contract('SaveDAI', function (accounts) {
       assert.equal(remainder.toString(), senderBalanceAfter.toString());
       assert.equal(partialTransfer.toString(), recipientBalanceAfter.toString());
     });
-    it('should deploy proxy and send cDAI to recipient (partial transfer)', async function () {
+    it('should deploy proxy and send cDAI to recipient (partial transfer)', async () => {
       const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
       const partialTransfer = senderBalanceBefore.div(new BN (4));
       const remainder = senderBalanceBefore.sub(partialTransfer);
 
       await savedaiInstance.transfer(recipient, partialTransfer, { from: userWallet });
+
+      recipientProxyAddress = await savedaiInstance.farmerProxy.call(recipient);
+
+      const sendercDAIbalanceAfter = await cDaiInstance.balanceOf(senderProxyAddress);
+      const recipientcDAIBalanceAfter = await cDaiInstance.balanceOf(recipientProxyAddress);
+
+      assert.equal(remainder.toString(), sendercDAIbalanceAfter.toString());
+      assert.equal(partialTransfer.toString(), recipientcDAIBalanceAfter.toString());
+    });
+  });
+  describe('transferFrom', async function () {
+    beforeEach(async () => {
+      // Mint SaveDAI tokens
+      await helpers.mint(amount);
+      senderProxyAddress = await savedaiInstance.farmerProxy.call(userWallet);
+      saveTokenFarmer = await SaveTokenFarmer.at(senderProxyAddress);
+    });
+    it('should transfer all saveDAI tokens from sender to recipient (full transfer)', async () => {
+      const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
+
+      // give approval to relayer to transfer tokens on sender's behalf
+      await savedaiInstance.approve(relayer, senderBalanceBefore, { from : userWallet });
+      await savedaiInstance.transferFrom(
+        userWallet, recipient, senderBalanceBefore,
+        { from: relayer },
+      );
+
+      const senderBalanceAfter = await savedaiInstance.balanceOf(userWallet);
+      const recipientBalanceAfter = await savedaiInstance.balanceOf(recipient);
+
+      assert.equal(senderBalanceAfter.toString(), 0);
+      assert.equal(senderBalanceBefore.toString(), recipientBalanceAfter.toString());
+    });
+    it('should deploy proxy and send all cDAI to recipient (full transfer)', async () => {
+      const sendercDAIbalanceBefore = await cDaiInstance.balanceOf(senderProxyAddress);
+      const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
+
+      // give approval to relayer to transfer tokens on sender's behalf
+      await savedaiInstance.approve(relayer, senderBalanceBefore, { from : userWallet });
+      await savedaiInstance.transferFrom(
+        userWallet, recipient, senderBalanceBefore,
+        { from: relayer },
+      );
+
+      recipientProxyAddress = await savedaiInstance.farmerProxy.call(recipient);
+
+      const sendercDAIbalanceAfter = await cDaiInstance.balanceOf(senderProxyAddress);
+      const recipientcDAIBalanceAfter = await cDaiInstance.balanceOf(recipientProxyAddress);
+
+      assert.equal(sendercDAIbalanceAfter.toString(), 0);
+      assert.equal(sendercDAIbalanceBefore.toString(), recipientcDAIBalanceAfter.toString());
+    });
+    it('should transfer saveDAI tokens from sender to recipient (partial transfer)', async () => {
+      const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
+      const partialTransfer = senderBalanceBefore.div(new BN (4));
+      const remainder = senderBalanceBefore.sub(partialTransfer);
+
+      // give approval to relayer to transfer saveDAI tokens on sender's behalf
+      await savedaiInstance.approve(relayer, partialTransfer, { from : userWallet });
+      await savedaiInstance.transferFrom(
+        userWallet, recipient, partialTransfer,
+        { from: relayer },
+      );
+
+      const senderBalanceAfter = await savedaiInstance.balanceOf(userWallet);
+      const recipientBalanceAfter = await savedaiInstance.balanceOf(recipient);
+
+      assert.equal(remainder.toString(), senderBalanceAfter.toString());
+      assert.equal(partialTransfer.toString(), recipientBalanceAfter.toString());
+    });
+    it('should deploy proxy and send cDAI to recipient (partial transfer)', async () => {
+      const senderBalanceBefore = await savedaiInstance.balanceOf(userWallet);
+      const partialTransfer = senderBalanceBefore.div(new BN (4));
+      const remainder = senderBalanceBefore.sub(partialTransfer);
+
+      // give approval to relayer to transfer saveDAI tokens on sender's behalf
+      await savedaiInstance.approve(relayer, partialTransfer, { from : userWallet });
+      await savedaiInstance.transferFrom(
+        userWallet, recipient, partialTransfer,
+        { from: relayer },
+      );
 
       recipientProxyAddress = await savedaiInstance.farmerProxy.call(recipient);
 
