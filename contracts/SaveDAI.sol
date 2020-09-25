@@ -116,7 +116,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
             )
         );
 
-        // mint the insurance token
+        // buy the insurance token
         uint256 oTokenAmount = _uniswapBuyOCDai(oTokenCost);
 
         // transfer DAI to the user's SaveTokenFarmer to mint cDAI
@@ -247,13 +247,13 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         external
         override
     {
+        require(farmerProxy[msg.sender] != address(0),
+            "The user farmer proxy must exist");
+
         if (!ocDai.hasExpired()) {
             // transfer _amount of ocDAI to msg.sender
             require(ocDai.transfer(msg.sender, _amount));
         }
-
-        require(farmerProxy[msg.sender] != address(0),
-            "The user farmer proxy must exist");
 
         // get user's SaveTokenFarmer address
         address proxy = farmerProxy[msg.sender];
@@ -314,19 +314,11 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         require(farmerProxy[msg.sender] != address(0), 
             "The user must have a farmer address");
 
-        // identify saveDAI contract's DAI balance
-        uint256 initialDaiBalance = dai.balanceOf(address(this));
-
         // get the proxy address to redeem cDAI from
         address proxy = farmerProxy[msg.sender];
 
         // transfer cDAI from SaveTokenFarmer
-        require(ISaveTokenFarmer(proxy).redeem(_amount, address(this)));
-
-        // identify saveDAI contract's updated DAI balance
-        uint256 updatedDaiBalance = dai.balanceOf(address(this));
-
-        uint256 daiRedeemed = updatedDaiBalance.sub(initialDaiBalance);
+        require(ISaveTokenFarmer(proxy).redeem(_amount, msg.sender));
 
         // saveDAI gives uniswap exchange allowance to transfer ocDAI tokens
         require(ocDai.approve(address(ocDaiExchange), _amount));
@@ -334,7 +326,7 @@ contract SaveDAI is ISaveDAI, ERC20, Pausable, AccessControl, FarmerFactory {
         uint256 daiTokens = _uniswapBuyDai(_amount);
 
         //transfer DAI to msg.sender
-        require(dai.transfer(msg.sender, daiTokens.add(daiRedeemed)));
+        require(dai.transfer(msg.sender, daiTokens));
 
         emit WithdrawForUnderlyingAsset(msg.sender, _amount);
         _burn(msg.sender, _amount);

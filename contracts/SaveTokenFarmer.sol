@@ -82,12 +82,18 @@ contract SaveTokenFarmer is ISaveTokenFarmer, Farmer {
         onlyOwner 
         returns (bool) 
     {
+        // identify SaveTokenFarmer contract's DAI balance
+        uint256 initialDaiBalance = dai.balanceOf(address(this));
+
         // Redeem returns 0 on success
         require(cDai.redeem(amount) == 0, "redeem function must execute successfully");
 
-        // identify DAI balance and transfer
-        uint256 daiBalance = dai.balanceOf(address(this));
-        require(dai.transfer(user, daiBalance), "must transfer");
+         // identify SaveTokenFarmer contract's updated DAI balance
+        uint256 updatedDaiBalance = dai.balanceOf(address(this));
+
+        uint256 daiRedeemed = updatedDaiBalance.sub(initialDaiBalance);
+
+        require(dai.transfer(user, daiRedeemed), "must transfer");
 
         // withdraw reward
         withdrawReward(user);
